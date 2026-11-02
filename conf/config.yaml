@@ -26,3 +26,10 @@ gbm:
   n_estimators: 300
   max_depth: 6
   learning_rate: 0.1
+
+simclr:
+  steps: 20000
+  batch_size: 512
+  lr: 0.001
+  temperature: 0.2
+  checkpoint: artifacts/simclr_encoder.pt
