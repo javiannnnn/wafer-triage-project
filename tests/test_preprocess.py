@@ -43,3 +43,13 @@ def test_to_channels_is_one_hot():
 def test_to_channels_rejects_values_outside_wafer_alphabet():
     with pytest.raises(ValueError, match="0, 1, 2"):
         to_channels(np.array([[0, 3]], dtype=np.uint8))
+
+
+def test_resize_all_stacks_maps_of_different_sizes():
+    from wm811k.preprocess import resize_all
+
+    maps = [np.ones((5, 7), dtype=np.uint8), np.zeros((30, 30), dtype=np.uint8)]
+
+    stacked = resize_all(maps, size=16)
+
+    assert stacked.shape == (2, 16, 16) and stacked.dtype == np.uint8

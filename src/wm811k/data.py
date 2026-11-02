@@ -49,3 +49,9 @@ def load_lswmd(path: str | Path) -> pd.DataFrame:
 
 def labeled_mask(df: pd.DataFrame) -> pd.Series:
     return df["label"].notna()
+
+
+def encode_labels(labels: pd.Series) -> np.ndarray:
+    """Class indices into LABELS; unlabeled rows become -1."""
+    index = {label: i for i, label in enumerate(LABELS)}
+    return labels.map(index).fillna(-1).astype(np.int64).to_numpy()

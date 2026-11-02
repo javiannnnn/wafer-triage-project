@@ -29,3 +29,40 @@ def raw_lswmd_path(tmp_path):
     path = tmp_path / "lswmd.pkl"
     df.to_pickle(path)
     return path
+
+
+@pytest.fixture
+def tiny_data():
+    """180 random 16x16 maps over 3 classes: 80 train-labeled, 20 val, 20 test, 60 unlabeled."""
+    from wm811k.experiment import ExperimentData
+    from wm811k.splits import Splits
+
+    rng = np.random.default_rng(0)
+    maps = rng.integers(0, 3, size=(180, 16, 16), dtype=np.uint8)
+    labels = np.concatenate([np.arange(120) % 3, np.full(60, -1)]).astype(np.int64)
+    # make classes learnable: class k has a bright stripe on row k
+    for i in range(120):
+        maps[i, labels[i], :] = 2
+    splits = Splits(
+        train_labeled=np.arange(80),
+        train_unlabeled=np.arange(120, 180),
+        val=np.arange(80, 100),
+        test=np.arange(100, 120),
+    )
+    return ExperimentData(maps=maps, labels=labels, splits=splits)
+
+
+@pytest.fixture
+def tiny_cfg(tmp_path):
+    from wm811k.config import load_config
+
+    db = (tmp_path / "mlflow.db").as_posix()
+    return load_config(
+        [
+            f"mlflow.tracking_uri=sqlite:///{db}",
+            "train.steps=6",
+            "train.eval_every=3",
+            "train.batch_size=16",
+            "gbm.n_estimators=5",
+        ]
+    )

@@ -1,6 +1,9 @@
 from collections.abc import Sequence
 
+import numpy as np
 from sklearn.metrics import f1_score, recall_score
+
+from wm811k.data import LABELS
 
 
 def evaluate(y_true: Sequence[str], y_pred: Sequence[str], labels: list[str]) -> dict[str, float]:
@@ -11,3 +14,9 @@ def evaluate(y_true: Sequence[str], y_pred: Sequence[str], labels: list[str]) ->
         "macro_f1": float(macro_f1),
         **{f"recall_{label}": float(r) for label, r in zip(labels, recalls, strict=True)},
     }
+
+
+def evaluate_encoded(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
+    """`evaluate` for class indices into LABELS."""
+    names = np.array(LABELS)
+    return evaluate(names[y_true], names[y_pred], LABELS)

@@ -42,3 +42,13 @@ def test_corrupt_pickle_raises_clear_error(tmp_path):
 
     with pytest.raises(DataLoadError, match="bad.pkl"):
         load_lswmd(bad)
+
+
+def test_encode_labels_maps_to_indices_and_unlabeled_to_minus_one():
+    import pandas as pd
+
+    from wm811k.data import encode_labels
+
+    labels = pd.Series(["Donut", None, "none"])
+
+    assert list(encode_labels(labels)) == [LABELS.index("Donut"), -1, LABELS.index("none")]
