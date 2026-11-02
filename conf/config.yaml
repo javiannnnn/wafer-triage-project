@@ -33,3 +33,8 @@ simclr:
   lr: 0.001
   temperature: 0.2
   checkpoint: artifacts/simclr_encoder.pt
+
+fixmatch:
+  threshold: 0.95
+  mu: 2
+  lambda_u: 1.0

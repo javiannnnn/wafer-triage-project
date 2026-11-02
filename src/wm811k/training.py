@@ -1,6 +1,6 @@
 import copy
 import random
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 import numpy as np
 import torch
@@ -91,6 +91,33 @@ def evaluate_split(
     return evaluate_encoded(data.labels[idx], predict(model, loader, device))
 
 
+def select_best_checkpoint(
+    model: nn.Module,
+    data: ExperimentData,
+    cfg: DictConfig,
+    device: torch.device,
+    train_step: Callable[[], None],
+) -> dict[str, float]:
+    """Call `train_step` cfg.train.steps times, validating every cfg.train.eval_every steps.
+
+    Restores the weights with the best val macro-F1, then returns `val_macro_f1` and that
+    checkpoint's test metrics, prefixed `test_`.
+    """
+    t = cfg.train
+    best_f1, best_state = -1.0, None
+    for step in range(1, t.steps + 1):
+        model.train()
+        train_step()
+        if step % t.eval_every == 0 or step == t.steps:
+            val_f1 = evaluate_split(model, data, data.splits.val, cfg, device)["macro_f1"]
+            if val_f1 > best_f1:
+                best_f1, best_state = val_f1, copy.deepcopy(model.state_dict())
+
+    model.load_state_dict(best_state)
+    test = evaluate_split(model, data, data.splits.test, cfg, device)
+    return {"val_macro_f1": best_f1, **{f"test_{k}": v for k, v in test.items()}}
+
+
 def fit_and_evaluate(
     model: nn.Module,
     data: ExperimentData,
@@ -98,10 +125,7 @@ def fit_and_evaluate(
     cfg: DictConfig,
     device: torch.device,
 ) -> dict[str, float]:
-    """Train with class-weighted cross-entropy; keep the checkpoint with the best val macro-F1.
-
-    Returns `val_macro_f1` and the test metrics of that checkpoint, prefixed `test_`.
-    """
+    """Supervised training with class-weighted cross-entropy on `train_idx`."""
     t = cfg.train
     model.to(device)
     labels = data.labels[train_idx]
@@ -112,20 +136,12 @@ def fit_and_evaluate(
     )
     batches = cycle_batches(loader)
 
-    best_f1, best_state = -1.0, None
-    for step in range(1, t.steps + 1):
-        model.train()
+    def train_step() -> None:
         x, y = next(batches)
         with autocast(device):
             loss = criterion(model(x.to(device)), y.to(device))
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        if step % t.eval_every == 0 or step == t.steps:
-            val_f1 = evaluate_split(model, data, data.splits.val, cfg, device)["macro_f1"]
-            if val_f1 > best_f1:
-                best_f1, best_state = val_f1, copy.deepcopy(model.state_dict())
 
-    model.load_state_dict(best_state)
-    test = evaluate_split(model, data, data.splits.test, cfg, device)
-    return {"val_macro_f1": best_f1, **{f"test_{k}": v for k, v in test.items()}}
+    return select_best_checkpoint(model, data, cfg, device, train_step)

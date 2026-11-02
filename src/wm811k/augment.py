@@ -23,3 +23,11 @@ def wafer_augment(x: torch.Tensor) -> torch.Tensor:
     out[:, 1:2] += dropped
     out[:, 2:3] -= dropped
     return out
+
+
+def weak_augment(x: torch.Tensor) -> torch.Tensor:
+    """Random vertical flip of a one-hot (B, 3, H, W) batch; the mild view FixMatch labels from."""
+    out = x.clone()
+    flipped = torch.rand(out.shape[0], device=out.device) < 0.5
+    out[flipped] = out[flipped].flip(2)
+    return out

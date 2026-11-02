@@ -40,3 +40,15 @@ def test_augment_does_not_modify_its_input():
     wafer_augment(x)
 
     assert torch.equal(x, before)
+
+
+def test_weak_augment_is_one_hot_and_only_flips():
+    from wm811k.augment import weak_augment
+
+    x = _one_hot_batch()
+
+    out = weak_augment(x)
+
+    assert torch.equal(out.sum(dim=1), torch.ones(32, 16, 16))
+    for original, augmented in zip(x, out, strict=True):
+        assert torch.equal(augmented, original) or torch.equal(augmented, original.flip(1))

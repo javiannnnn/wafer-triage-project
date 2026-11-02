@@ -73,3 +73,27 @@ def test_fit_and_evaluate_learns_separable_classes(tiny_data, tiny_cfg):
 
     # three present classes out of nine -> a perfect macro-F1 would be 1/3
     assert metrics["test_macro_f1"] > 0.25
+
+
+def test_select_best_checkpoint_restores_the_best_weights(tiny_data, tiny_cfg):
+    from omegaconf import OmegaConf
+
+    from wm811k.training import select_best_checkpoint
+
+    cfg = OmegaConf.merge(tiny_cfg, {"train": {"steps": 3, "eval_every": 1}})
+    model = build_backbone(num_classes=9)
+    initial = model.conv1.weight.detach().clone()
+    calls = []
+
+    def wrecking_step():
+        calls.append(1)
+        if len(calls) > 1:  # step 1 leaves the model alone; later steps always predict class 8
+            with torch.no_grad():
+                for p in model.parameters():
+                    p.zero_()
+                model.fc.bias[8] = 1000.0
+
+    select_best_checkpoint(model, tiny_data, cfg, torch.device("cpu"), wrecking_step)
+
+    assert len(calls) == 3
+    assert torch.equal(model.conv1.weight, initial)
