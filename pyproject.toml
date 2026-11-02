@@ -8,6 +8,7 @@ dependencies = [
     "numpy>=1.26,<2.3",
     "pandas>=2.2,<3",
     "scikit-learn (>=1.5,<2)",
+    "mlflow (>=2.17)",
 ]
 
 [tool.poetry]
@@ -24,6 +25,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+filterwarnings = ["ignore:The ``noload`` loader strategy:DeprecationWarning"]
 
 [tool.ruff]
 line-length = 100

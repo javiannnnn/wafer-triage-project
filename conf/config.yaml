@@ -11,5 +11,5 @@ budgets: [0.01, 0.05, 0.10, 0.25, 1.0]
 seeds: [0, 1, 2]
 
 mlflow:
-  tracking_uri: mlruns
+  tracking_uri: sqlite:///mlflow.db
   experiment_name: wm811k
