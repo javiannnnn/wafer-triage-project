@@ -3,7 +3,8 @@ import pandas as pd
 import pytest
 
 from wm811k.results import collect_results, plot_label_efficiency, summarize
-from wm811k.tracking import start_run
+from wm811k.sweep import ARMS
+from wm811k.tracking import config_fingerprint, start_run
 
 
 @pytest.fixture
@@ -17,6 +18,7 @@ def logged_cfg(tiny_cfg):
                 "model": model,
                 "fraction": str(fraction),
                 "seed": str(seed),
+                "config": config_fingerprint(tiny_cfg, ARMS[model].sections),
             }
             with start_run(tiny_cfg, f"{model}-{fraction}-{seed}", tags):
                 mlflow.log_metrics({"test_macro_f1": base + 0.01 * seed, "val_macro_f1": base})
@@ -32,6 +34,20 @@ def test_collect_results_has_one_row_per_run_and_skips_pretraining(logged_cfg):
     assert set(results["series"]) == {"gbm", "cnn"}
     assert results["fraction"].dtype == float and results["seed"].dtype == int
     assert {"test_macro_f1", "val_macro_f1", "run_id"} <= set(results.columns)
+
+
+def test_collect_results_ignores_runs_made_with_a_different_config(logged_cfg):
+    tags = {"arm": "supervised", "model": "cnn", "fraction": "1.0", "seed": "5", "config": "stale"}
+    with start_run(logged_cfg, "old-config-run", tags):
+        mlflow.log_metrics({"test_macro_f1": 0.99, "val_macro_f1": 0.99})
+    legacy = {"arm": "supervised", "model": "cnn", "fraction": "1.0", "seed": "6"}
+    with start_run(logged_cfg, "run-without-config-tag", legacy):
+        mlflow.log_metrics({"test_macro_f1": 0.98, "val_macro_f1": 0.98})
+
+    results = collect_results(logged_cfg)
+
+    assert len(results) == 8
+    assert 5 not in set(results["seed"]) and 6 not in set(results["seed"])
 
 
 def test_collect_results_is_empty_for_a_fresh_store(tiny_cfg):

@@ -97,3 +97,11 @@ def test_select_best_checkpoint_restores_the_best_weights(tiny_data, tiny_cfg):
 
     assert len(calls) == 3
     assert torch.equal(model.conv1.weight, initial)
+
+
+def test_loader_keeps_its_workers_alive_between_passes_when_it_uses_workers():
+    maps = np.zeros((8, 4, 4), dtype=np.uint8)
+    labels = np.zeros(8, dtype=int)
+
+    assert make_loader(maps, labels, 4, shuffle=True, num_workers=2).persistent_workers is True
+    assert make_loader(maps, labels, 4, shuffle=True, num_workers=0).persistent_workers is False

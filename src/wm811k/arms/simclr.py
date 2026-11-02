@@ -12,7 +12,7 @@ from wm811k.augment import wafer_augment
 from wm811k.data import LABELS
 from wm811k.experiment import ExperimentData
 from wm811k.models import build_backbone
-from wm811k.tracking import start_run
+from wm811k.tracking import config_fingerprint, start_run
 from wm811k.training import (
     autocast,
     cycle_batches,
@@ -24,6 +24,8 @@ from wm811k.training import (
 
 ARM = "simclr"
 MODEL = "finetune"
+SECTIONS = ("train", "simclr")
+PRETRAIN_SECTIONS = ("simclr",)
 PROJECTION_DIM = 128
 
 
@@ -43,7 +45,10 @@ def pretrain_simclr(cfg: DictConfig, data: ExperimentData) -> Path:
     device = get_device()
     rows = np.concatenate([data.splits.train_labeled, data.splits.train_unlabeled])
     loader = make_loader(
-        data.maps[rows], data.labels[rows], s.batch_size, shuffle=True,
+        data.maps[rows],
+        data.labels[rows],
+        s.batch_size,
+        shuffle=True,
         num_workers=cfg.train.num_workers,
     )
     encoder = build_backbone().to(device)
@@ -76,7 +81,22 @@ def pretrain_simclr(cfg: DictConfig, data: ExperimentData) -> Path:
         checkpoint.parent.mkdir(parents=True, exist_ok=True)
         torch.save(encoder.state_dict(), checkpoint)
         mlflow.log_param("checkpoint", str(checkpoint))
+        _fingerprint_file(checkpoint).write_text(config_fingerprint(cfg, PRETRAIN_SECTIONS))
     return checkpoint
+
+
+def _fingerprint_file(checkpoint: Path) -> Path:
+    return checkpoint.with_name(checkpoint.name + ".fingerprint")
+
+
+def _checkpoint_matches_config(cfg: DictConfig, checkpoint: Path) -> bool:
+    """True when the checkpoint was pretrained with these simclr settings on this split."""
+    fingerprint = _fingerprint_file(checkpoint)
+    return (
+        checkpoint.is_file()
+        and fingerprint.is_file()
+        and fingerprint.read_text() == config_fingerprint(cfg, PRETRAIN_SECTIONS)
+    )
 
 
 def load_encoder(model: nn.Module, checkpoint: Path) -> None:
@@ -98,12 +118,18 @@ def finetune(
         log_model_if_full_budget(model, fraction)
         return metrics
 
-    return run_logged(cfg, data, arm=ARM, model=MODEL, fraction=fraction, seed=seed, fit=fit)
+    return run_logged(
+        cfg, data, arm=ARM, model=MODEL, fraction=fraction, seed=seed, sections=SECTIONS, fit=fit
+    )
 
 
 def run_simclr_arm(cfg: DictConfig, data: ExperimentData, fraction: float, seed: int) -> dict:
-    """Fine-tune from the configured checkpoint, pretraining it first if it does not exist yet."""
+    """Fine-tune from the configured checkpoint, pretraining first unless a matching one exists.
+
+    A checkpoint pretrained under different simclr settings or a different split is not reused:
+    its encoder may have seen maps that are now held out.
+    """
     checkpoint = Path(cfg.simclr.checkpoint)
-    if not checkpoint.is_file():
+    if not _checkpoint_matches_config(cfg, checkpoint):
         pretrain_simclr(cfg, data)
     return finetune(cfg, data, checkpoint, fraction, seed)

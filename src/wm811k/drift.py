@@ -4,8 +4,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from evidently import DataDefinition, Dataset, Report
-from evidently.presets import DataDriftPreset
 
 from wm811k.api.predictor import Predictor
 from wm811k.monitoring import COLUMNS, summarize_wafer
@@ -42,6 +40,10 @@ def check_drift(
             f"at least {min_samples} are needed to test for drift"
         )
         return DriftResult(False, 0.0, f"<p>{note}</p>", len(current), note)
+
+    # imported here: only the serving image has evidently, and Colab runs sweeps without it
+    from evidently import DataDefinition, Dataset, Report
+    from evidently.presets import DataDriftPreset
 
     definition = DataDefinition(numerical_columns=NUMERICAL, categorical_columns=CATEGORICAL)
     report = Report([DataDriftPreset(drift_share=DRIFT_SHARE, threshold=P_VALUE_THRESHOLD)])

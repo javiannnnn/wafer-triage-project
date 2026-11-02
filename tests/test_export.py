@@ -1,12 +1,18 @@
 import json
 
 import mlflow
+import numpy as np
 import pandas as pd
 import pytest
 import torch
 
 from wm811k.arms.supervised import train_cnn
-from wm811k.export import best_full_budget_run, export_model, register_run
+from wm811k.export import (
+    best_full_budget_run,
+    export_model,
+    register_run,
+    write_eval_sample,
+)
 from wm811k.models import build_backbone
 from wm811k.results import collect_results
 
@@ -60,3 +66,37 @@ def test_register_run_adds_a_model_version_to_the_registry(trained_run, tiny_cfg
     assert version == 1
     client = mlflow.MlflowClient(tiny_cfg.mlflow.tracking_uri)
     assert client.get_registered_model(tiny_cfg.mlflow.model_name).name == "wafer-classifier"
+
+
+def test_eval_sample_covers_every_test_class_with_a_per_class_cap(tiny_data, tmp_path):
+    path = write_eval_sample(tiny_data, tmp_path, per_class_cap=3, seed=0)
+
+    with np.load(path) as sample:
+        labels, maps = sample["labels"], sample["maps"]
+    test_labels = tiny_data.labels[tiny_data.splits.test]
+    assert set(labels) == set(test_labels)
+    assert all((labels == c).sum() <= 3 for c in set(labels))
+    assert maps.shape[1:] == tiny_data.maps.shape[1:]
+
+
+def test_eval_sample_comes_only_from_the_test_split_with_matching_labels(tiny_data, tmp_path):
+    path = write_eval_sample(tiny_data, tmp_path, per_class_cap=100, seed=0)
+
+    with np.load(path) as sample:
+        maps, labels = sample["maps"], sample["labels"]
+    test_idx = tiny_data.splits.test
+    label_of = {
+        wafer.tobytes(): label
+        for wafer, label in zip(tiny_data.maps[test_idx], tiny_data.labels[test_idx], strict=True)
+    }
+    assert len(maps) == len(test_idx)
+    pairs = zip(maps, labels, strict=True)
+    assert all(label_of[wafer.tobytes()] == label for wafer, label in pairs)
+
+
+def test_eval_sample_is_deterministic_for_a_seed(tiny_data, tmp_path):
+    a = write_eval_sample(tiny_data, tmp_path / "a", per_class_cap=3, seed=1)
+    b = write_eval_sample(tiny_data, tmp_path / "b", per_class_cap=3, seed=1)
+
+    with np.load(a) as first, np.load(b) as second:
+        assert np.array_equal(first["maps"], second["maps"])

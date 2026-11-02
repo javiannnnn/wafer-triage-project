@@ -8,6 +8,7 @@ from matplotlib.ticker import FixedLocator, FuncFormatter, NullLocator
 from omegaconf import DictConfig
 
 from wm811k.sweep import ARMS, SERIES_BY_RUN
+from wm811k.tracking import config_fingerprint
 
 SURFACE = "#fcfcfb"
 INK = "#0b0b0b"
@@ -32,7 +33,9 @@ def collect_results(cfg: DictConfig) -> pd.DataFrame:
     if runs.empty or "tags.fraction" not in runs:
         return pd.DataFrame()
 
-    runs = runs[runs["tags.fraction"].notna()]
+    if "tags.config" not in runs:
+        return pd.DataFrame()
+    runs = runs[runs["tags.fraction"].notna() & runs["tags.config"].notna()]
     identities = zip(runs["tags.arm"], runs["tags.model"], strict=True)
     results = pd.DataFrame(
         {
@@ -44,7 +47,9 @@ def collect_results(cfg: DictConfig) -> pd.DataFrame:
     )
     for column in runs.columns[runs.columns.str.startswith("metrics.")]:
         results[column.removeprefix("metrics.")] = runs[column].to_numpy()
-    return results
+    results["config"] = runs["tags.config"].to_numpy()
+    current = results["series"].map(lambda name: config_fingerprint(cfg, ARMS[name].sections))
+    return results[results["config"] == current].reset_index(drop=True)
 
 
 def summarize(results: pd.DataFrame, metric: str) -> pd.DataFrame:

@@ -13,6 +13,8 @@ from wm811k.training import class_weights, fit_and_evaluate, get_device
 ARM = "supervised"
 MODEL_CNN = "cnn"
 MODEL_GBM = "gbm"
+SECTIONS_CNN = ("train",)
+SECTIONS_GBM = ("gbm",)
 
 
 def _feature_matrix(data: ExperimentData, idx: np.ndarray) -> np.ndarray:
@@ -26,7 +28,16 @@ def train_cnn(cfg: DictConfig, data: ExperimentData, fraction: float, seed: int)
         log_model_if_full_budget(model, fraction)
         return metrics
 
-    return run_logged(cfg, data, arm=ARM, model=MODEL_CNN, fraction=fraction, seed=seed, fit=fit)
+    return run_logged(
+        cfg,
+        data,
+        arm=ARM,
+        model=MODEL_CNN,
+        fraction=fraction,
+        seed=seed,
+        sections=SECTIONS_CNN,
+        fit=fit,
+    )
 
 
 def train_gbm(cfg: DictConfig, data: ExperimentData, fraction: float, seed: int) -> dict:
@@ -53,4 +64,13 @@ def train_gbm(cfg: DictConfig, data: ExperimentData, fraction: float, seed: int)
             **{f"test_{k}": v for k, v in score(data.splits.test).items()},
         }
 
-    return run_logged(cfg, data, arm=ARM, model=MODEL_GBM, fraction=fraction, seed=seed, fit=fit)
+    return run_logged(
+        cfg,
+        data,
+        arm=ARM,
+        model=MODEL_GBM,
+        fraction=fraction,
+        seed=seed,
+        sections=SECTIONS_GBM,
+        fit=fit,
+    )

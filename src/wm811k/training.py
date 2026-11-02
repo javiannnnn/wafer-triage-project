@@ -56,6 +56,7 @@ def make_loader(
         batch_size=batch_size,
         shuffle=shuffle,
         num_workers=num_workers,
+        persistent_workers=num_workers > 0,
         drop_last=shuffle and len(maps) > batch_size,
     )
 

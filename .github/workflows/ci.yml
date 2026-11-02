@@ -20,10 +20,11 @@ jobs:
         run: poetry run ruff check .
       - name: Test
         run: poetry run pytest
-      # Fails the build when the committed model's test macro-F1 is below gate.min_macro_f1.
+      # Re-scores the committed weights on the committed held-out sample and fails the build when
+      # macro-F1 is below gate.min_macro_f1.
       # Skipped until a model has been exported and committed (see README).
       - name: Model quality gate
-        if: ${{ hashFiles('models/best_model/metadata.json') != '' }}
+        if: ${{ hashFiles('models/best_model/weights.pt') != '' && hashFiles('models/best_model/eval_sample.npz') != '' }}
         run: poetry run python -m wm811k.cli gate
 
   docker:

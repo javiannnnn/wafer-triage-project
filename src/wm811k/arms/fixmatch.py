@@ -19,6 +19,7 @@ from wm811k.training import (
 
 ARM = "fixmatch"
 MODEL = "resnet18"
+SECTIONS = ("train", "fixmatch")
 HIDDEN_LABEL = -1
 
 
@@ -80,4 +81,6 @@ def train_fixmatch(cfg: DictConfig, data: ExperimentData, fraction: float, seed:
         log_model_if_full_budget(model, fraction)
         return metrics
 
-    return run_logged(cfg, data, arm=ARM, model=MODEL, fraction=fraction, seed=seed, fit=fit)
+    return run_logged(
+        cfg, data, arm=ARM, model=MODEL, fraction=fraction, seed=seed, sections=SECTIONS, fit=fit
+    )

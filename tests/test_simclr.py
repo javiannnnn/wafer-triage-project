@@ -2,7 +2,13 @@ import mlflow
 import pytest
 import torch
 
-from wm811k.arms.simclr import finetune, load_encoder, nt_xent_loss, pretrain_simclr
+from wm811k.arms.simclr import (
+    finetune,
+    load_encoder,
+    nt_xent_loss,
+    pretrain_simclr,
+    run_simclr_arm,
+)
 from wm811k.models import build_backbone
 
 
@@ -88,6 +94,34 @@ def test_load_encoder_rejects_checkpoint_with_unexpected_keys(tmp_path):
 
     with pytest.raises(ValueError, match="not_a_layer"):
         load_encoder(build_backbone(num_classes=9), ckpt)
+
+
+def test_run_simclr_arm_pretrains_once_per_config_and_again_when_the_config_changes(
+    tiny_data, tiny_cfg, tmp_path, monkeypatch
+):
+    import wm811k.arms.simclr as simclr
+
+    calls = []
+    real = simclr.pretrain_simclr
+
+    def spy(cfg, data):
+        calls.append(1)
+        return real(cfg, data)
+
+    monkeypatch.setattr(simclr, "pretrain_simclr", spy)
+    cfg = _with(tiny_cfg, steps=2, batch_size=16, checkpoint=str(tmp_path / "enc.pt"))
+
+    run_simclr_arm(cfg, tiny_data, 0.5, 0)
+    run_simclr_arm(cfg, tiny_data, 0.5, 1)
+    assert len(calls) == 1  # the checkpoint is reused across fine-tune seeds
+
+    run_simclr_arm(_with(cfg, steps=3), tiny_data, 0.5, 0)
+    assert len(calls) == 2  # different pretraining settings
+
+    from omegaconf import OmegaConf
+
+    run_simclr_arm(OmegaConf.merge(cfg, {"split": {"seed": 7}}), tiny_data, 0.5, 0)
+    assert len(calls) == 3  # a different split: the old encoder saw what is now held out
 
 
 def _with(cfg, **simclr_overrides):

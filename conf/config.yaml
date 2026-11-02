@@ -47,8 +47,8 @@ fixmatch:
 export_dir: models/best_model
 
 gate:
-  min_macro_f1: 0.3  # provisional: set to just under the best full-label result after the sweep
-  metadata_file: models/best_model/metadata.json
+  # provisional: after `export`, set to just under the sample macro-F1 it prints
+  min_macro_f1: 0.3
 
 drift:
   reference_size: 5000

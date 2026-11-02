@@ -65,7 +65,7 @@ flowchart LR
 
 - **Experiment tracking and registry:** every run logs its config, tags (`arm`, `model`, `fraction`, `seed`) and metrics to MLflow (SQLite store). Full-label neural runs also log the trained model; `export` picks the best by validation macro-F1, registers it as `wafer-classifier`, and writes `weights.pt`, `labels.json` and `metadata.json` to `models/best_model/`.
 - **Serving:** a FastAPI app in a multi-stage Docker image (CPU torch, main dependencies only). `POST /predict` takes a wafer map of any size up to 512x512 with values in {0, 1, 2}; invalid input gets a 422, never a 500.
-- **CI (GitHub Actions):** ruff, the test suite, and a **quality gate** that fails the build if the committed model's test macro-F1 drops below `gate.min_macro_f1`. A second job builds the image and smoke-tests `/health` and `/predict`. The gate and the image job switch on once a model is committed.
+- **CI (GitHub Actions):** ruff, the test suite, and a **quality gate** that re-scores the committed weights on a small held-out sample committed beside them (up to 100 test maps per class) and fails the build if macro-F1 drops below `gate.min_macro_f1`. Swapped, corrupted or regressed weights fail it. A second job builds the image and smoke-tests `/health` and `/predict`. Both switch on once `models/best_model/` is committed.
 - **Drift monitoring:** the service keeps a window of recent predictions (die count, defect ratio and predicted label of each resized map). `GET /drift-report` compares it with a reference built from validation maps using Evidently and returns the HTML report; if the window has drifted it writes `artifacts/retrain.flag`. Fewer than 200 predictions never raises an alarm. `simulate-drift` demonstrates it end to end.
 
 ## Running it
@@ -76,15 +76,18 @@ poetry run pytest                   # the full suite
 
 # 1. build the compressed data cache (needs LSWMD.pkl in the repo root)
 poetry run python -m wm811k.cli prepare
-# 2. run the sweep on Colab: upload artifacts/experiment_data.npz to Drive and open
-#    notebooks/colab_run.ipynb (A100). Or locally, one arm at a time:
+# 2. run the sweep, export and reference on Colab: upload artifacts/experiment_data.npz to Drive and
+#    open notebooks/colab_run.ipynb (A100). It saves to Drive after every run and resumes where it
+#    stopped. Download models/best_model/ and artifacts/ from Drive into the repo root afterwards.
+#    Locally, one arm at a time instead:
 poetry run python -m wm811k.cli sweep gbm cnn simclr fixmatch
-# 3. results chart and tables
+# 3. results chart and tables (the notebook already wrote them to artifacts/)
 poetry run python -m wm811k.cli results
-# 4. register + export the best full-label model, then build the drift reference
+# 4. the notebook also ran these; run them again only if you swept locally.
+#    export registers the best full-label model and prints the sample macro-F1 to gate on
 poetry run python -m wm811k.cli export
 poetry run python -m wm811k.cli reference
-# 5. set gate.min_macro_f1 in conf/config.yaml just under the exported model's test macro-F1
+# 5. set gate.min_macro_f1 in conf/config.yaml just under that printed sample macro-F1, then
 poetry run python -m wm811k.cli gate
 
 # serve
@@ -97,6 +100,7 @@ poetry run python -m wm811k.cli simulate-drift
 ```
 
 Any config value can be overridden on the command line, e.g. `budgets=[0.05,1.0] seeds=[0] train.steps=2000`.
+Runs are tagged with a fingerprint of the settings that shaped them (split, map size, and the arm's own sections), so a quick trial with different settings is never skipped over, mixed into the results, or exported by mistake.
 
 ## Layout
 

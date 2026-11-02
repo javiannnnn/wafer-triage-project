@@ -39,6 +39,14 @@ def test_model_dependent_steps_are_skipped_until_a_model_is_committed():
         assert "hashFiles" in step["if"] and cfg.export_dir in step["if"]
 
 
+def test_the_gate_step_waits_for_both_the_weights_and_the_committed_sample():
+    gate_step = next(
+        s for s in WORKFLOW["jobs"]["test"]["steps"] if "wm811k.cli gate" in s.get("run", "")
+    )
+
+    assert "weights.pt" in gate_step["if"] and "eval_sample.npz" in gate_step["if"]
+
+
 def test_docker_job_smoke_tests_health_and_predict():
     commands = "\n".join(_run_steps("docker"))
 

@@ -2,11 +2,15 @@ import json
 from pathlib import Path
 
 import mlflow
+import numpy as np
 import pandas as pd
 import torch
 from omegaconf import DictConfig
 
 from wm811k.data import LABELS
+from wm811k.experiment import ExperimentData
+
+SAMPLE_FILE = "eval_sample.npz"
 
 NEURAL_SERIES = ("cnn", "simclr", "fixmatch")  # the arms whose full-label runs log a model
 
@@ -46,3 +50,22 @@ def export_model(cfg: DictConfig, run_id: str, out_dir: str | Path) -> Path:
     }
     (out / "metadata.json").write_text(json.dumps(metadata, indent=2))
     return out
+
+
+def write_eval_sample(
+    data: ExperimentData, out_dir: str | Path, per_class_cap: int = 100, seed: int = 0
+) -> Path:
+    """Save a small class-balanced sample of the test split next to the model, for the CI gate."""
+    rng = np.random.default_rng(seed)
+    test = data.splits.test
+    chosen = np.concatenate(
+        [
+            rng.permutation(test[data.labels[test] == label])[:per_class_cap]
+            for label in np.unique(data.labels[test])
+        ]
+    )
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    path = out / SAMPLE_FILE
+    np.savez_compressed(path, maps=data.maps[chosen], labels=data.labels[chosen])
+    return path

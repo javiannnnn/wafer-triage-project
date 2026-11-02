@@ -7,7 +7,7 @@ from omegaconf import DictConfig
 
 from wm811k.experiment import ExperimentData
 from wm811k.splits import labeled_subset
-from wm811k.tracking import start_run
+from wm811k.tracking import config_fingerprint, start_run
 from wm811k.training import seed_everything
 
 
@@ -19,13 +19,23 @@ def run_logged(
     model: str,
     fraction: float,
     seed: int,
+    sections: tuple[str, ...],
     fit: Callable[[np.ndarray], dict[str, float]],
 ) -> dict[str, float]:
-    """Pick the label budget, seed, and run `fit(train_idx)` inside a tagged MLflow run."""
+    """Pick the label budget, seed, and run `fit(train_idx)` inside a tagged MLflow run.
+
+    `sections` names the config sections the arm depends on; they go into the run's `config` tag.
+    """
     seed_everything(seed)
     train_labeled = data.splits.train_labeled
     train_idx = labeled_subset(train_labeled, data.labels[train_labeled], fraction, seed)
-    tags = {"arm": arm, "model": model, "fraction": str(fraction), "seed": str(seed)}
+    tags = {
+        "arm": arm,
+        "model": model,
+        "fraction": str(fraction),
+        "seed": str(seed),
+        "config": config_fingerprint(cfg, sections),
+    }
     with start_run(cfg, run_name=f"{arm}-{model}-{fraction}-{seed}", tags=tags):
         mlflow.log_param("n_labeled", len(train_idx))
         metrics = fit(train_idx)

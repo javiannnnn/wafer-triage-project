@@ -8,8 +8,8 @@ from omegaconf import DictConfig
 from wm811k.api.predictor import Predictor
 from wm811k.config import load_config
 from wm811k.drift import inflate_defects, reference_frame, simulate_drift
-from wm811k.export import best_full_budget_run, export_model, register_run
-from wm811k.gate import check_gate
+from wm811k.export import best_full_budget_run, export_model, register_run, write_eval_sample
+from wm811k.gate import check_gate, sample_macro_f1
 from wm811k.http_client import get_drift_detected, post_json
 from wm811k.pipeline import prepare_experiment_data
 from wm811k.results import collect_results, plot_label_efficiency, summarize
@@ -45,16 +45,22 @@ def _results(cfg: DictConfig, arms: list[str]) -> None:
 
 def _export(cfg: DictConfig, arms: list[str]) -> None:
     best = best_full_budget_run(collect_results(cfg))
-    version = register_run(cfg, best["run_id"])
+    # export first: a model that cannot be loaded must not end up in the registry
     out = export_model(cfg, best["run_id"], cfg.export_dir)
+    write_eval_sample(prepare_experiment_data(cfg), out)
+    version = register_run(cfg, best["run_id"])
     print(f"registered {cfg.mlflow.model_name} v{version}; exported {best['series']} run to {out}")
+    print(
+        f"sample macro-F1 {sample_macro_f1(out):.4f}: "
+        "set gate.min_macro_f1 just under it in conf/config.yaml"
+    )
 
 
 def _gate(cfg: DictConfig, arms: list[str]) -> None:
     if not check_gate(cfg):
         sys.exit(
-            f"quality gate failed: need test_macro_f1 >= {cfg.gate.min_macro_f1} "
-            f"in {cfg.gate.metadata_file}"
+            f"quality gate failed: {cfg.export_dir} must contain weights.pt and eval_sample.npz "
+            f"and score sample macro-F1 >= {cfg.gate.min_macro_f1}"
         )
     print("quality gate passed")
 
