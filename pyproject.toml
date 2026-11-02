@@ -12,6 +12,7 @@ dependencies = [
     "torch (>=2.15.0,<3.0.0)",
     "torchvision (>=0.29.2,<0.30.0)",
     "xgboost (>=2.1)",
+    "matplotlib (>=3.9)",
 ]
 
 [tool.poetry]
@@ -32,6 +33,7 @@ filterwarnings = ["ignore:The ``noload`` loader strategy:DeprecationWarning"]
 
 [tool.ruff]
 line-length = 100
+extend-exclude = ["notebooks"]
 src = ["src", "tests"]
 
 [tool.ruff.lint]

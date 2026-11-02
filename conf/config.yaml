@@ -1,11 +1,14 @@
 data:
   path: LSWMD.pkl
+  cache: artifacts/experiment_data.npz
   map_size: 64
 
 split:
   seed: 0
   val_frac: 0.1
   test_frac: 0.2
+
+artifacts_dir: artifacts
 
 budgets: [0.01, 0.05, 0.10, 0.25, 1.0]
 seeds: [0, 1, 2]

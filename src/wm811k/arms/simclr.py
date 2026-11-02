@@ -23,6 +23,7 @@ from wm811k.training import (
 )
 
 ARM = "simclr"
+MODEL = "finetune"
 PROJECTION_DIM = 128
 
 
@@ -95,4 +96,12 @@ def finetune(
         load_encoder(model, checkpoint)
         return fit_and_evaluate(model, data, train_idx, cfg, get_device())
 
-    return run_logged(cfg, data, arm=ARM, model="finetune", fraction=fraction, seed=seed, fit=fit)
+    return run_logged(cfg, data, arm=ARM, model=MODEL, fraction=fraction, seed=seed, fit=fit)
+
+
+def run_simclr_arm(cfg: DictConfig, data: ExperimentData, fraction: float, seed: int) -> dict:
+    """Fine-tune from the configured checkpoint, pretraining it first if it does not exist yet."""
+    checkpoint = Path(cfg.simclr.checkpoint)
+    if not checkpoint.is_file():
+        pretrain_simclr(cfg, data)
+    return finetune(cfg, data, checkpoint, fraction, seed)

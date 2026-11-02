@@ -8,14 +8,8 @@ def _raw_label(value):
     return np.array([[value]]) if value is not None else np.array([])
 
 
-@pytest.fixture
-def raw_lswmd_path(tmp_path):
-    """A tiny pickle in the exact raw LSWMD layout, including the `trianTestLabel` typo."""
-    rows = [
-        (np.ones((4, 5), dtype=np.uint8), 20.0, "lot1", 1.0, "Training", "Center"),
-        (np.ones((3, 3), dtype=np.uint8), 9.0, "lot1", 2.0, "Test", "none"),
-        (np.zeros((6, 2), dtype=np.uint8), 12.0, "lot2", 1.0, None, None),
-    ]
+def _write_raw_lswmd(path, rows):
+    """rows: (wafer_map, die_size, lot, wafer_index, split_hint, label) tuples."""
     df = pd.DataFrame(
         {
             "waferMap": [r[0] for r in rows],
@@ -26,9 +20,39 @@ def raw_lswmd_path(tmp_path):
             "failureType": [_raw_label(r[5]) for r in rows],
         }
     )
-    path = tmp_path / "lswmd.pkl"
     df.to_pickle(path)
     return path
+
+
+@pytest.fixture
+def raw_lswmd_path(tmp_path):
+    """A tiny pickle in the exact raw LSWMD layout, including the `trianTestLabel` typo."""
+    rows = [
+        (np.ones((4, 5), dtype=np.uint8), 20.0, "lot1", 1.0, "Training", "Center"),
+        (np.ones((3, 3), dtype=np.uint8), 9.0, "lot1", 2.0, "Test", "none"),
+        (np.zeros((6, 2), dtype=np.uint8), 12.0, "lot2", 1.0, None, None),
+    ]
+    return _write_raw_lswmd(tmp_path / "lswmd.pkl", rows)
+
+
+@pytest.fixture
+def big_raw_path(tmp_path):
+    """60 lots x 6 wafers (4 labeled over 3 classes, 2 unlabeled): enough to split by lot."""
+    rng = np.random.default_rng(0)
+    classes = ["Center", "Donut", "none"]
+    rows = [
+        (
+            rng.integers(0, 3, size=(12, 12), dtype=np.uint8),
+            144.0,
+            f"lot{lot}",
+            float(w),
+            "Training" if w < 4 else None,
+            classes[(lot + w) % 3] if w < 4 else None,
+        )
+        for lot in range(60)
+        for w in range(6)
+    ]
+    return _write_raw_lswmd(tmp_path / "big.pkl", rows)
 
 
 @pytest.fixture

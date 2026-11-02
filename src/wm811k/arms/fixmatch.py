@@ -18,6 +18,7 @@ from wm811k.training import (
 )
 
 ARM = "fixmatch"
+MODEL = "resnet18"
 HIDDEN_LABEL = -1
 
 
@@ -77,4 +78,4 @@ def train_fixmatch(cfg: DictConfig, data: ExperimentData, fraction: float, seed:
 
         return select_best_checkpoint(model, data, cfg, device, train_step)
 
-    return run_logged(cfg, data, arm=ARM, model="resnet18", fraction=fraction, seed=seed, fit=fit)
+    return run_logged(cfg, data, arm=ARM, model=MODEL, fraction=fraction, seed=seed, fit=fit)

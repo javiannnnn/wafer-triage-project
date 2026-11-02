@@ -11,6 +11,8 @@ from wm811k.models import build_backbone
 from wm811k.training import class_weights, fit_and_evaluate, get_device
 
 ARM = "supervised"
+MODEL_CNN = "cnn"
+MODEL_GBM = "gbm"
 
 
 def _feature_matrix(data: ExperimentData, idx: np.ndarray) -> np.ndarray:
@@ -22,7 +24,7 @@ def train_cnn(cfg: DictConfig, data: ExperimentData, fraction: float, seed: int)
         model = build_backbone(num_classes=len(LABELS))
         return fit_and_evaluate(model, data, train_idx, cfg, get_device())
 
-    return run_logged(cfg, data, arm=ARM, model="cnn", fraction=fraction, seed=seed, fit=fit)
+    return run_logged(cfg, data, arm=ARM, model=MODEL_CNN, fraction=fraction, seed=seed, fit=fit)
 
 
 def train_gbm(cfg: DictConfig, data: ExperimentData, fraction: float, seed: int) -> dict:
@@ -49,4 +51,4 @@ def train_gbm(cfg: DictConfig, data: ExperimentData, fraction: float, seed: int)
             **{f"test_{k}": v for k, v in score(data.splits.test).items()},
         }
 
-    return run_logged(cfg, data, arm=ARM, model="gbm", fraction=fraction, seed=seed, fit=fit)
+    return run_logged(cfg, data, arm=ARM, model=MODEL_GBM, fraction=fraction, seed=seed, fit=fit)
