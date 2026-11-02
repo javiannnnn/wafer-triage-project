@@ -91,3 +91,22 @@ def tiny_cfg(tmp_path):
             "gbm.n_estimators=5",
         ]
     )
+
+
+@pytest.fixture
+def model_dir(tmp_path):
+    """A randomly initialised model in the exported layout, for 16x16 inputs."""
+    import json
+
+    import torch
+
+    from wm811k.data import LABELS
+    from wm811k.models import build_backbone
+
+    torch.manual_seed(0)
+    out = tmp_path / "model"
+    out.mkdir()
+    torch.save(build_backbone(num_classes=9).state_dict(), out / "weights.pt")
+    (out / "labels.json").write_text(json.dumps(LABELS))
+    (out / "metadata.json").write_text(json.dumps({"map_size": 16}))
+    return out

@@ -15,6 +15,7 @@ dependencies = [
     "matplotlib (>=3.9)",
     "fastapi (>=0.162.0,<0.163.0)",
     "uvicorn (>=0.30)",
+    "evidently (>=0.7.23,<0.8.0)",
 ]
 
 [tool.poetry]
@@ -32,7 +33,14 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-filterwarnings = ["ignore:The ``noload`` loader strategy:DeprecationWarning"]
+filterwarnings = [
+    "ignore:The ``noload`` loader strategy:DeprecationWarning",
+    "ignore:invalid value encountered in divide:RuntimeWarning:numpy.lib._function_base_impl",
+    "ignore:ks_2samp. Exact calculation unsuccessful:RuntimeWarning",
+    "ignore:Call to deprecated function:DeprecationWarning",
+    "ignore:Use of deprecated class:DeprecationWarning",
+    "ignore:numpy.core is deprecated:DeprecationWarning",
+]
 
 [tool.ruff]
 line-length = 100

@@ -5,11 +5,11 @@ import numpy as np
 import torch
 
 from wm811k.models import build_backbone
-from wm811k.preprocess import resize_map, to_channels
+from wm811k.preprocess import to_channels
 
 
 class Predictor:
-    """The exported classifier: raw wafer map in, label and class probabilities out."""
+    """The exported classifier. Maps must already be resized to `map_size`."""
 
     def __init__(self, model: torch.nn.Module, labels: list[str], map_size: int):
         self.model = model.eval()
@@ -28,8 +28,15 @@ class Predictor:
         return cls(model, labels, map_size)
 
     @torch.no_grad()
-    def predict(self, wafer: np.ndarray) -> tuple[str, dict[str, float]]:
-        channels = to_channels(resize_map(wafer, self.map_size))
-        probabilities = self.model(torch.from_numpy(channels)[None]).softmax(dim=1)[0].tolist()
-        by_label = dict(zip(self.labels, probabilities, strict=True))
+    def predict_batch(self, maps: np.ndarray, batch_size: int = 256) -> np.ndarray:
+        """Class probabilities, shape (N, n_labels), for resized maps of shape (N, S, S)."""
+        chunks = []
+        for start in range(0, len(maps), batch_size):
+            batch = np.stack([to_channels(m) for m in maps[start : start + batch_size]])
+            chunks.append(self.model(torch.from_numpy(batch)).softmax(dim=1).numpy())
+        return np.concatenate(chunks)
+
+    def predict(self, resized_map: np.ndarray) -> tuple[str, dict[str, float]]:
+        probabilities = self.predict_batch(resized_map[None])[0]
+        by_label = dict(zip(self.labels, probabilities.tolist(), strict=True))
         return max(by_label, key=by_label.get), by_label

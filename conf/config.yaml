@@ -49,3 +49,10 @@ export_dir: models/best_model
 gate:
   min_macro_f1: 0.3  # provisional: set to just under the best full-label result after the sweep
   metadata_file: models/best_model/metadata.json
+
+drift:
+  reference_size: 5000
+  url: http://localhost:8080
+  shift_rate: 0.3
+  normal_samples: 500
+  shifted_samples: 1500

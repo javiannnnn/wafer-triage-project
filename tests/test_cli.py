@@ -66,3 +66,67 @@ def test_export_command_exports_the_best_full_label_run(tiny_data, tiny_cfg, tmp
     )
 
     assert (out / "weights.pt").is_file() and (out / "metadata.json").is_file()
+
+
+def _data_overrides(big_raw_path, tmp_path):
+    return [
+        f"data.path={big_raw_path.as_posix()}",
+        f"data.cache={(tmp_path / 'cache.npz').as_posix()}",
+        "data.map_size=16",
+    ]
+
+
+def test_reference_command_writes_reference_csv_next_to_the_model(
+    big_raw_path, model_dir, tmp_path
+):
+    import pandas as pd
+
+    from wm811k.cli import main
+    from wm811k.monitoring import COLUMNS
+
+    overrides = _data_overrides(big_raw_path, tmp_path)
+    main(["reference", f"export_dir={model_dir.as_posix()}", *overrides])
+
+    reference = pd.read_csv(model_dir / "reference.csv")
+    assert list(reference.columns) == COLUMNS and len(reference) > 0
+
+
+def test_simulate_drift_command_detects_the_shift_end_to_end(
+    big_raw_path, model_dir, tmp_path, capsys
+):
+    import threading
+    import time
+
+    import uvicorn
+
+    from wm811k.api.app import create_app
+    from wm811k.cli import main
+
+    overrides = _data_overrides(big_raw_path, tmp_path)
+    main(["reference", f"export_dir={model_dir.as_posix()}", *overrides])
+    app = create_app(model_dir, flag_path=tmp_path / "retrain.flag", drift_min_samples=15)
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=0, log_level="error"))
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    while not server.started:
+        time.sleep(0.05)
+    port = server.servers[0].sockets[0].getsockname()[1]
+
+    try:
+        main(
+            [
+                "simulate-drift",
+                f"drift.url=http://127.0.0.1:{port}",
+                "drift.normal_samples=20",
+                "drift.shifted_samples=20",
+                "drift.shift_rate=0.9",
+                *overrides,
+            ]
+        )
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10)
+
+    output = capsys.readouterr().out
+    assert "before shift: drifted=False" in output
+    assert "after shift: drifted=True" in output

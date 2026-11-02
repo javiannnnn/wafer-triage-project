@@ -2,11 +2,15 @@ import sys
 from collections.abc import Callable
 from pathlib import Path
 
+import numpy as np
 from omegaconf import DictConfig
 
+from wm811k.api.predictor import Predictor
 from wm811k.config import load_config
+from wm811k.drift import inflate_defects, reference_frame, simulate_drift
 from wm811k.export import best_full_budget_run, export_model, register_run
 from wm811k.gate import check_gate
+from wm811k.http_client import get_drift_detected, post_json
 from wm811k.pipeline import prepare_experiment_data
 from wm811k.results import collect_results, plot_label_efficiency, summarize
 from wm811k.sweep import ARMS, run_sweep
@@ -55,12 +59,44 @@ def _gate(cfg: DictConfig, arms: list[str]) -> None:
     print("quality gate passed")
 
 
+def _reference(cfg: DictConfig, arms: list[str]) -> None:
+    data = prepare_experiment_data(cfg)
+    rng = np.random.default_rng(cfg.split.seed)
+    size = min(cfg.drift.reference_size, len(data.splits.val))
+    chosen = rng.choice(data.splits.val, size=size, replace=False)
+    reference = reference_frame(Predictor.from_dir(cfg.export_dir), data.maps[chosen])
+    path = Path(cfg.export_dir) / "reference.csv"
+    reference.to_csv(path, index=False)
+    print(f"wrote {len(reference)} reference rows to {path}")
+
+
+def _simulate_drift(cfg: DictConfig, arms: list[str]) -> None:
+    data = prepare_experiment_data(cfg)
+    n_normal, n_shifted = cfg.drift.normal_samples, cfg.drift.shifted_samples
+    chosen = np.random.default_rng(cfg.split.seed).choice(
+        data.splits.test, size=n_normal + n_shifted, replace=False
+    )
+    normal = data.maps[chosen[:n_normal]]
+    shifted = inflate_defects(data.maps[chosen[n_normal:]], cfg.drift.shift_rate, cfg.split.seed)
+    url = cfg.drift.url
+    outcome = simulate_drift(
+        post=lambda wafer: post_json(url, "/predict", {"wafer_map": wafer}),
+        drifted=lambda: get_drift_detected(url),
+        normal_maps=normal,
+        shifted_maps=shifted,
+    )
+    print(f"before shift: drifted={outcome['before_shift']}")
+    print(f"after shift: drifted={outcome['after_shift']}")
+
+
 COMMANDS: dict[str, Callable[[DictConfig, list[str]], None]] = {
     "prepare": _prepare,
     "sweep": _sweep,
     "results": _results,
     "export": _export,
     "gate": _gate,
+    "reference": _reference,
+    "simulate-drift": _simulate_drift,
 }
 
 

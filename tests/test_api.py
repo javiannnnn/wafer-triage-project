@@ -1,23 +1,11 @@
-import json
-
 import numpy as np
 import pytest
-import torch
 from fastapi.testclient import TestClient
 
 from wm811k.api.app import create_app
+from wm811k.api.predictor import Predictor
 from wm811k.data import LABELS
-from wm811k.models import build_backbone
-
-
-@pytest.fixture
-def model_dir(tmp_path):
-    """A randomly initialised model in the exported layout, for 16x16 inputs."""
-    torch.manual_seed(0)
-    torch.save(build_backbone(num_classes=9).state_dict(), tmp_path / "weights.pt")
-    (tmp_path / "labels.json").write_text(json.dumps(LABELS))
-    (tmp_path / "metadata.json").write_text(json.dumps({"map_size": 16}))
-    return tmp_path
+from wm811k.drift import inflate_defects, reference_frame
 
 
 @pytest.fixture
@@ -97,3 +85,63 @@ def test_each_prediction_is_recorded_in_the_monitoring_window(model_dir):
 def test_missing_model_directory_fails_at_startup_with_a_clear_error(tmp_path):
     with pytest.raises(FileNotFoundError, match="weights.pt"):
         create_app(tmp_path)
+
+
+def _maps(n=60, seed=0):
+    return np.random.default_rng(seed).integers(0, 3, size=(n, 16, 16), dtype=np.uint8)
+
+
+def _post_all(client, maps):
+    for m in maps:
+        assert client.post("/predict", json={"wafer_map": m.tolist()}).status_code == 200
+
+
+def _app_with_reference(model_dir, tmp_path, maps):
+    reference_frame(Predictor.from_dir(model_dir), maps).to_csv(
+        model_dir / "reference.csv", index=False
+    )
+    flag = tmp_path / "retrain.flag"
+    return create_app(model_dir, flag_path=flag, drift_min_samples=50), flag
+
+
+def test_drift_report_without_a_reference_is_503_with_instructions(client):
+    response = client.get("/drift-report")
+
+    assert response.status_code == 503 and "reference" in response.json()["detail"]
+
+
+def test_drift_report_for_in_distribution_traffic_does_not_raise_the_flag(model_dir, tmp_path):
+    maps = _maps()
+    app, flag = _app_with_reference(model_dir, tmp_path, maps)
+    client = TestClient(app)
+    _post_all(client, maps)
+
+    response = client.get("/drift-report")
+
+    assert response.status_code == 200 and "text/html" in response.headers["content-type"]
+    assert response.headers["x-drift-detected"] == "false"
+    assert not flag.exists()
+
+
+def test_drift_report_for_shifted_traffic_raises_the_retrain_flag(model_dir, tmp_path):
+    maps = _maps()
+    app, flag = _app_with_reference(model_dir, tmp_path, maps)
+    client = TestClient(app)
+    _post_all(client, inflate_defects(maps, rate=1.0, seed=0))
+
+    response = client.get("/drift-report")
+
+    assert response.headers["x-drift-detected"] == "true"
+    assert flag.is_file() and "drift" in flag.read_text().lower()
+
+
+def test_drift_report_with_too_few_predictions_is_not_an_alarm(model_dir, tmp_path):
+    maps = _maps()
+    app, flag = _app_with_reference(model_dir, tmp_path, maps)
+    client = TestClient(app)
+    _post_all(client, inflate_defects(maps[:5], rate=1.0, seed=0))
+
+    response = client.get("/drift-report")
+
+    assert response.status_code == 200 and response.headers["x-drift-detected"] == "false"
+    assert not flag.exists()
