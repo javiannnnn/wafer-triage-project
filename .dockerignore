@@ -1,0 +1,15 @@
+.git
+.venv
+.superpowers
+.pytest_cache
+.ruff_cache
+__pycache__
+LSWMD.pkl
+LSWMD.pkl.dvc
+mlflow.db
+mlruns
+mlartifacts
+artifacts
+notebooks
+docs
+tests

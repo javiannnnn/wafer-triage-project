@@ -20,3 +20,30 @@ jobs:
         run: poetry run ruff check .
       - name: Test
         run: poetry run pytest
+      # Fails the build when the committed model's test macro-F1 is below gate.min_macro_f1.
+      # Skipped until a model has been exported and committed (see README).
+      - name: Model quality gate
+        if: ${{ hashFiles('models/best_model/metadata.json') != '' }}
+        run: poetry run python -m wm811k.cli gate
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        if: ${{ hashFiles('models/best_model/weights.pt') != '' }}
+        run: docker build -t wm811k:ci .
+      - name: Smoke test the container
+        if: ${{ hashFiles('models/best_model/weights.pt') != '' }}
+        run: |
+          docker run -d --name wm811k -p 8080:8080 wm811k:ci
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/health && break
+            sleep 2
+          done
+          curl -sf http://localhost:8080/health
+          curl -sf -X POST http://localhost:8080/predict \
+            -H "Content-Type: application/json" \
+            -d '{"wafer_map": [[0,1,1,0],[1,2,1,1],[1,1,2,1],[0,1,1,0]]}'
+          docker logs wm811k
