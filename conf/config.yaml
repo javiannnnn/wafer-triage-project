@@ -15,7 +15,9 @@ seeds: [0, 1, 2]
 
 mlflow:
   tracking_uri: sqlite:///mlflow.db
+  artifact_root: mlartifacts
   experiment_name: wm811k
+  model_name: wafer-classifier
 
 train:
   steps: 4000
@@ -41,3 +43,9 @@ fixmatch:
   threshold: 0.95
   mu: 2
   lambda_u: 1.0
+
+export_dir: models/best_model
+
+gate:
+  min_macro_f1: 0.3  # provisional: set to just under the best full-label result after the sweep
+  metadata_file: models/best_model/metadata.json

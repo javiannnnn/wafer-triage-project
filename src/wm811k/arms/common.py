@@ -2,6 +2,7 @@ from collections.abc import Callable
 
 import mlflow
 import numpy as np
+import torch.nn as nn
 from omegaconf import DictConfig
 
 from wm811k.experiment import ExperimentData
@@ -30,3 +31,12 @@ def run_logged(
         metrics = fit(train_idx)
         mlflow.log_metrics(metrics)
     return metrics
+
+
+def log_model_if_full_budget(model: nn.Module, fraction: float) -> None:
+    """Attach the trained model to the active run when it used every label.
+
+    Only full-label runs are candidates for serving, so partial-budget runs stay lightweight.
+    """
+    if fraction == 1.0:
+        mlflow.pytorch.log_model(model.cpu(), name="model", serialization_format="pickle")

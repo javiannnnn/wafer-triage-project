@@ -1,8 +1,10 @@
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any
 
 import mlflow
+from mlflow import MlflowClient
 from mlflow.entities import Run
 from omegaconf import DictConfig, OmegaConf
 
@@ -20,11 +22,20 @@ def flatten_config(config: Mapping[str, Any], prefix: str = "") -> dict[str, Any
     return flat
 
 
+def _ensure_experiment(cfg: DictConfig) -> None:
+    """Create the experiment with the configured artifact root the first time it is needed."""
+    name = cfg.mlflow.experiment_name
+    if MlflowClient(cfg.mlflow.tracking_uri).get_experiment_by_name(name) is None:
+        root = Path(cfg.mlflow.artifact_root).resolve().as_uri()
+        MlflowClient(cfg.mlflow.tracking_uri).create_experiment(name, artifact_location=root)
+    mlflow.set_experiment(name)
+
+
 @contextmanager
 def start_run(cfg: DictConfig, run_name: str, tags: dict[str, str]) -> Iterator[Run]:
     """Point MLflow at the configured store/experiment and open a run with the config logged."""
     mlflow.set_tracking_uri(cfg.mlflow.tracking_uri)
-    mlflow.set_experiment(cfg.mlflow.experiment_name)
+    _ensure_experiment(cfg)
     with mlflow.start_run(run_name=run_name, tags=tags) as run:
         mlflow.log_params(flatten_config(OmegaConf.to_container(cfg, resolve=True)))
         yield run

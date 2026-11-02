@@ -41,7 +41,12 @@ def test_flatten_config_uses_dotted_keys():
 
 def test_start_run_logs_params_and_tags(tmp_path):
     db = (tmp_path / "mlflow.db").as_posix()
-    cfg = load_config([f"mlflow.tracking_uri=sqlite:///{db}"])
+    cfg = load_config(
+        [
+            f"mlflow.tracking_uri=sqlite:///{db}",
+            f"mlflow.artifact_root={(tmp_path / 'mlartifacts').as_posix()}",
+        ]
+    )
 
     with start_run(cfg, run_name="smoke", tags={"arm": "test"}) as run:
         mlflow.log_metric("macro_f1", 0.5)

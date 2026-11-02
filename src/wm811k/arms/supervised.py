@@ -2,7 +2,7 @@ import numpy as np
 from omegaconf import DictConfig
 from xgboost import XGBClassifier
 
-from wm811k.arms.common import run_logged
+from wm811k.arms.common import log_model_if_full_budget, run_logged
 from wm811k.data import LABELS
 from wm811k.experiment import ExperimentData
 from wm811k.features import extract_features
@@ -22,7 +22,9 @@ def _feature_matrix(data: ExperimentData, idx: np.ndarray) -> np.ndarray:
 def train_cnn(cfg: DictConfig, data: ExperimentData, fraction: float, seed: int) -> dict:
     def fit(train_idx: np.ndarray) -> dict[str, float]:
         model = build_backbone(num_classes=len(LABELS))
-        return fit_and_evaluate(model, data, train_idx, cfg, get_device())
+        metrics = fit_and_evaluate(model, data, train_idx, cfg, get_device())
+        log_model_if_full_budget(model, fraction)
+        return metrics
 
     return run_logged(cfg, data, arm=ARM, model=MODEL_CNN, fraction=fraction, seed=seed, fit=fit)
 

@@ -5,6 +5,8 @@ from pathlib import Path
 from omegaconf import DictConfig
 
 from wm811k.config import load_config
+from wm811k.export import best_full_budget_run, export_model, register_run
+from wm811k.gate import check_gate
 from wm811k.pipeline import prepare_experiment_data
 from wm811k.results import collect_results, plot_label_efficiency, summarize
 from wm811k.sweep import ARMS, run_sweep
@@ -37,17 +39,35 @@ def _results(cfg: DictConfig, arms: list[str]) -> None:
     print(summary.to_string(index=False))
 
 
+def _export(cfg: DictConfig, arms: list[str]) -> None:
+    best = best_full_budget_run(collect_results(cfg))
+    version = register_run(cfg, best["run_id"])
+    out = export_model(cfg, best["run_id"], cfg.export_dir)
+    print(f"registered {cfg.mlflow.model_name} v{version}; exported {best['series']} run to {out}")
+
+
+def _gate(cfg: DictConfig, arms: list[str]) -> None:
+    if not check_gate(cfg):
+        sys.exit(
+            f"quality gate failed: need test_macro_f1 >= {cfg.gate.min_macro_f1} "
+            f"in {cfg.gate.metadata_file}"
+        )
+    print("quality gate passed")
+
+
 COMMANDS: dict[str, Callable[[DictConfig, list[str]], None]] = {
     "prepare": _prepare,
     "sweep": _sweep,
     "results": _results,
+    "export": _export,
+    "gate": _gate,
 }
 
 
 def main(argv: list[str] | None = None) -> None:
     argv = sys.argv[1:] if argv is None else argv
     if not argv or argv[0] not in COMMANDS:
-        sys.exit("usage: python -m wm811k.cli {prepare|sweep|results} [arms...] [key=value...]")
+        sys.exit(f"usage: python -m wm811k.cli {{{'|'.join(COMMANDS)}}} [arms...] [key=value...]")
     arms, overrides = split_cli_args(argv[1:])
     COMMANDS[argv[0]](load_config(overrides), arms)
 

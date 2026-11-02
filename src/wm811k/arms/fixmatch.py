@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from omegaconf import DictConfig
 
-from wm811k.arms.common import run_logged
+from wm811k.arms.common import log_model_if_full_budget, run_logged
 from wm811k.augment import wafer_augment, weak_augment
 from wm811k.data import LABELS
 from wm811k.experiment import ExperimentData
@@ -76,6 +76,8 @@ def train_fixmatch(cfg: DictConfig, data: ExperimentData, fraction: float, seed:
             loss.backward()
             optimizer.step()
 
-        return select_best_checkpoint(model, data, cfg, device, train_step)
+        metrics = select_best_checkpoint(model, data, cfg, device, train_step)
+        log_model_if_full_budget(model, fraction)
+        return metrics
 
     return run_logged(cfg, data, arm=ARM, model=MODEL, fraction=fraction, seed=seed, fit=fit)

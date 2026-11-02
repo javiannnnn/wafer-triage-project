@@ -39,6 +39,7 @@ def collect_results(cfg: DictConfig) -> pd.DataFrame:
             "series": [SERIES_BY_RUN[identity] for identity in identities],
             "fraction": runs["tags.fraction"].astype(float).to_numpy(),
             "seed": runs["tags.seed"].astype(int).to_numpy(),
+            "run_id": runs["run_id"].to_numpy(),
         }
     )
     for column in runs.columns[runs.columns.str.startswith("metrics.")]:

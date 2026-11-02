@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from omegaconf import DictConfig
 
-from wm811k.arms.common import run_logged
+from wm811k.arms.common import log_model_if_full_budget, run_logged
 from wm811k.augment import wafer_augment
 from wm811k.data import LABELS
 from wm811k.experiment import ExperimentData
@@ -94,7 +94,9 @@ def finetune(
     def fit(train_idx: np.ndarray) -> dict[str, float]:
         model = build_backbone(num_classes=len(LABELS))
         load_encoder(model, checkpoint)
-        return fit_and_evaluate(model, data, train_idx, cfg, get_device())
+        metrics = fit_and_evaluate(model, data, train_idx, cfg, get_device())
+        log_model_if_full_budget(model, fraction)
+        return metrics
 
     return run_logged(cfg, data, arm=ARM, model=MODEL, fraction=fraction, seed=seed, fit=fit)
 

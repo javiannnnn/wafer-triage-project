@@ -84,6 +84,7 @@ def tiny_cfg(tmp_path):
     return load_config(
         [
             f"mlflow.tracking_uri=sqlite:///{db}",
+            f"mlflow.artifact_root={(tmp_path / 'mlartifacts').as_posix()}",
             "train.steps=6",
             "train.eval_every=3",
             "train.batch_size=16",

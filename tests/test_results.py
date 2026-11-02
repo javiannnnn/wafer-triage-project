@@ -31,7 +31,7 @@ def test_collect_results_has_one_row_per_run_and_skips_pretraining(logged_cfg):
     assert len(results) == 8
     assert set(results["series"]) == {"gbm", "cnn"}
     assert results["fraction"].dtype == float and results["seed"].dtype == int
-    assert {"test_macro_f1", "val_macro_f1"} <= set(results.columns)
+    assert {"test_macro_f1", "val_macro_f1", "run_id"} <= set(results.columns)
 
 
 def test_collect_results_is_empty_for_a_fresh_store(tiny_cfg):
