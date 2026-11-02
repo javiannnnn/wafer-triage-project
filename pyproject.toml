@@ -13,6 +13,8 @@ dependencies = [
     "torchvision (>=0.29.2,<0.30.0)",
     "xgboost (>=2.1)",
     "matplotlib (>=3.9)",
+    "fastapi (>=0.162.0,<0.163.0)",
+    "uvicorn (>=0.30)",
 ]
 
 [tool.poetry]
@@ -21,6 +23,7 @@ packages = [{ include = "wm811k", from = "src" }]
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8,<9"
 ruff = ">=0.6"
+httpx2 = "^2.16.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
