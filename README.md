@@ -1,8 +1,37 @@
-# Wafer defect classification on WM-811K: supervised vs semi-supervised, with an MLOps layer
+# Wafer defect triage with semi-supervised and self-supervised learning
 
 Semiconductor fabs produce millions of wafer maps, but only a small share ever get a human defect label.
-This project asks how much that matters: **when labels are scarce, how much of the gap can self-supervised and semi-supervised learning close?**
-It answers with a controlled comparison across five label budgets. It then wraps the best model in the pipeline a team would need to ship and monitor it: tracked experiments, a model registry, a containerised API, CI with a quality gate, and drift monitoring that raises a retrain flag.
+In this project I study how much that matters: **when labels are scarce, how much of the gap to a fully labeled model can self-supervised and semi-supervised learning close?**
+I answer it with a controlled comparison across five label budgets on WM-811K. I then wrap the best model in the pipeline a team would need to ship and monitor it: tracked experiments, a model registry, a containerised API, CI with a quality gate, and drift monitoring that raises a retrain flag.
+
+## Background
+
+Both approaches try to get value out of unlabeled data, but in different ways.
+
+**Semi-supervised learning** trains on a small labeled set and a large unlabeled set together.
+The classic recipe is self-training:
+
+1. Train a model on the labeled data.
+2. Use it to predict labels for the unlabeled data, and keep only the high-confidence predictions (pseudo-labels).
+3. Retrain on the labeled and pseudo-labeled data together, and repeat.
+
+Labeling thousands of examples by hand is slow and expensive, so this often gives better accuracy and generalisation than training on the scarce labels alone.
+It has two main risks:
+
+- **Confirmation bias.** A wrong pseudo-label is trained on as if it were true, so the model can lock in its own mistakes and amplify them over training.
+- **Broken assumptions.** The method assumes that points close together in the data share a class. When the data's structure is complex or breaks that assumption, the unlabeled data can add little or even hurt.
+
+**Self-supervised learning** uses no labels at all in its first stage.
+The model solves a pretext task whose answer comes from the data itself.
+BERT, for example, learns by predicting words that have been masked out of a sentence.
+Solving the pretext task forces the network (the encoder) to learn general-purpose features.
+The pretrained encoder is then fine-tuned on a small labeled set for the real task. This is called downstream fine-tuning.
+The same two-stage pattern underlies the pretraining of today's large language models.
+
+**How this project uses them:**
+
+- **FixMatch** (semi-supervised) does pseudo-labeling online, within each training step, rather than in separate retraining rounds. The model labels a lightly augmented copy of each unlabeled map (a flip), keeps only predictions with at least 95% confidence, and is trained to give the same label to a heavily augmented copy (rotation, flip and die dropout). The high threshold limits confirmation bias.
+- **SimCLR** (self-supervised) uses a contrastive pretext task instead of masked prediction. Two random augmentations of the same wafer map must produce matching embeddings, and maps that differ must produce different ones. It pretrains on all 738,590 training maps, labeled or not, and the encoder is then fine-tuned on each label budget.
 
 ## Results
 
