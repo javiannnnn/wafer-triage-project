@@ -2,9 +2,11 @@ LSWMD.pkl
 .superpowers/
 .venv/
 mlruns/
-artifacts/
+artifacts/experiment_data.npz
 __pycache__/
 .pytest_cache/
 .ruff_cache/
 mlflow.db
 mlartifacts/
+run_results/
+.playwright-mcp/

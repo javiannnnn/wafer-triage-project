@@ -1,0 +1,17 @@
+{
+  "run_id": "c7ce1eb6215047ff91bbbddc21801411",
+  "map_size": 64,
+  "arm": "fixmatch",
+  "model": "resnet18",
+  "val_macro_f1": 0.8664156718668302,
+  "test_macro_f1": 0.8431513859248736,
+  "test_recall_Center": 0.9220023282887078,
+  "test_recall_Donut": 0.9099099099099099,
+  "test_recall_Edge-Loc": 0.838150289017341,
+  "test_recall_Edge-Ring": 0.9705578512396694,
+  "test_recall_Loc": 0.7298050139275766,
+  "test_recall_Near-full": 0.8666666666666667,
+  "test_recall_Random": 0.9248554913294798,
+  "test_recall_Scratch": 0.680672268907563,
+  "test_recall_none": 0.983626008542952
+}

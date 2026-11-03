@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WM-811K Sweep Results</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one reading column of findings; each finding is claim, then chart, then the numbers behind it. */
+:root {
+  --bg: #fcfcfb;
+  --panel: #f3f3ef;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #7c7b74;
+  --grid: #e4e3dc;
+  --axis: #c3c2b7;
+  --rule: #dddcd4;
+  --s-gbm: #2a78d6;
+  --s-cnn: #eb6834;
+  --s-simclr: #1baf7a;
+  --s-fixmatch: #eda100;
+  --seq-lo: #f1f6fd;
+  --seq-hi: #104281;
+  --on-strong: #ffffff;
+  --good: #0a7d3e;
+  --warn: #9a6200;
+  --die: #d9d8d0;
+  --defect: #0b0b0b;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1a1a19; --panel: #232321; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #8f8e86;
+    --grid: #30302d; --axis: #4a4945; --rule: #383834;
+    --s-gbm: #3987e5; --s-cnn: #d95926; --s-simclr: #199e70; --s-fixmatch: #c98500;
+    --seq-lo: #22262c; --seq-hi: #86b6ef; --on-strong: #0b0b0b;
+    --good: #4cc27f; --warn: #e0a640; --die: #3a3a36; --defect: #f0efec;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1a1a19; --panel: #232321; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #8f8e86;
+  --grid: #30302d; --axis: #4a4945; --rule: #383834;
+  --s-gbm: #3987e5; --s-cnn: #d95926; --s-simclr: #199e70; --s-fixmatch: #c98500;
+  --seq-lo: #22262c; --seq-hi: #86b6ef; --on-strong: #0b0b0b;
+  --good: #4cc27f; --warn: #e0a640; --die: #3a3a36; --defect: #f0efec;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 400 16px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 72px;
+}
+main { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -0.005em; }
+h1 { font-size: 2.4rem; line-height: 1.1; }
+h2 { font-size: 1.55rem; line-height: 1.2; }
+h3 { font-size: 1.05rem; line-height: 1.3; }
+p { margin: 0; max-width: 66ch; }
+.eyebrow { font: 500 0.75rem/1.2 var(--font-data); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 1.08rem; color: var(--ink-2); }
+section { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+header { display: flex; flex-direction: column; gap: 14px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 20px; font: 400 0.8rem/1.4 var(--font-data); color: var(--muted); }
+.num, td.n, th.n { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.note { font-size: 0.875rem; color: var(--ink-2); }
+strong { font-weight: 600; }
+code { font: 0.85em var(--font-data); background: var(--panel); padding: 1px 5px; border-radius: 3px; }
+
+/* verdict */
+.verdict { border-top: 2px solid var(--ink); }
+.verdict table { width: 100%; }
+.pill { display: inline-flex; align-items: center; gap: 6px; font: 500 0.72rem/1 var(--font-data); letter-spacing: 0.04em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.clear { color: var(--good); }
+.pill.lean { color: var(--warn); }
+.pill.tie { color: var(--muted); }
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* tables */
+.tbl-wrap { overflow-x: auto; min-width: 0; }
+table { border-collapse: collapse; font-size: 0.9rem; }
+th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+th { font: 500 0.72rem/1.3 var(--font-data); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+td.n, th.n { text-align: right; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: -1px; }
+.series-name { white-space: nowrap; }
+
+/* charts */
+.chart { position: relative; width: 100%; min-width: 0; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart text { font-family: var(--font-data); font-size: 11px; fill: var(--ink-2); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.85rem; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; }
+.tip { position: absolute; pointer-events: none; background: var(--bg); color: var(--ink); border: 1px solid var(--axis); border-radius: 6px; padding: 8px 10px; font: 400 0.8rem/1.45 var(--font-body); box-shadow: 0 4px 14px rgb(0 0 0 / 0.12); min-width: 150px; z-index: 5; }
+.tip b { font-family: var(--font-data); font-weight: 500; }
+.tip .row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.tip .row span:first-child { display: inline-flex; align-items: center; }
+.tip .head { font: 500 0.72rem/1.3 var(--font-data); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+
+/* segmented control */
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--axis); border-radius: 8px; overflow: hidden; align-self: flex-start; }
+.seg button { font: 500 0.8rem/1 var(--font-data); background: transparent; color: var(--ink-2); border: 0; border-right: 1px solid var(--axis); padding: 9px 14px; cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.seg button:focus-visible, button:focus-visible { outline: 2px solid var(--s-gbm); outline-offset: 2px; }
+
+/* heatmaps */
+table.heat td.cell { text-align: center; font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: 0.82rem; border: 2px solid var(--bg); padding: 7px 6px; min-width: 58px; }
+table.heat th { text-align: center; }
+table.heat th.rowh { text-align: left; }
+table.heat td { border-bottom: 0; }
+.cls { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.cls canvas { width: 32px; height: 32px; image-rendering: pixelated; border-radius: 50%; flex: none; }
+.cls small { display: block; font: 400 0.72rem/1.2 var(--font-data); color: var(--muted); }
+table.cm td.cell { min-width: 44px; font-size: 0.75rem; padding: 6px 3px; }
+table.cm th { font-size: 0.66rem; letter-spacing: 0.02em; padding: 6px 3px; }
+.scale { display: flex; align-items: center; gap: 8px; font: 400 0.75rem var(--font-data); color: var(--muted); }
+.scale i { display: block; width: 120px; height: 8px; border-radius: 4px; background: linear-gradient(to right, var(--seq-lo), var(--seq-hi)); }
+
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; }
+.two > * { min-width: 0; }
+.stat { display: flex; flex-direction: column; gap: 2px; padding-block: 12px; border-top: 1px solid var(--rule); }
+.stat .v { font: 500 1.6rem/1.1 var(--font-data); font-variant-numeric: tabular-nums; }
+.stat .k { font-size: 0.85rem; color: var(--ink-2); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0 24px; }
+
+ul.plain { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 8px; max-width: 70ch; }
+ul.plain li::marker { color: var(--muted); }
+footer { font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 16px; }
+@media (max-width: 520px) { h1 { font-size: 1.9rem; } body { padding-block: 24px 48px; } main { gap: 44px; } }
+</style>
+
+<main>
+<header>
+  <div class="eyebrow">Wafer defect classification · label-budget sweep</div>
+  <h1>WM-811K sweep results</h1>
+  <p class="lede">I trained four methods at five label budgets with three seeds each (60 runs) and scored every run on the same lot-disjoint test set of 34,601 wafers. The question was how much self-supervised and semi-supervised learning buys you when labels are scarce.</p>
+  <div class="meta"><span>Metric: test macro-F1, 9 classes</span><span>Seeds paired: same labeled subset across methods</span><span>Run on Colab A100</span></div>
+</header>
+
+<section class="verdict">
+  <div class="eyebrow" style="padding-top:14px">Which method to use</div>
+  <div class="tbl-wrap"><table id="verdict"></table></div>
+  <p class="note">Gain is the paired difference against the supervised CNN, averaged over 3 seeds, in macro-F1 points. "Clear" means the best method leads the runner-up by more than 1.5 points on average and in all 3 seeds.</p>
+</section>
+
+<section>
+  <h2>SimCLR leads below 10% of labels; FixMatch leads at 25%</h2>
+  <p>SimCLR pretraining on all 739k maps is worth the most when labels are scarcest. At 1% (1,210 labeled wafers) it scores 0.66 against the CNN's 0.43. FixMatch overtakes it at 25% and stays level with the CNN at full labels. GBM on hand-made features beats the CNN at small budgets but stops improving at about 0.75.</p>
+  <div class="legend" id="lg1"></div>
+  <div class="chart" id="c-eff" role="img" aria-label="Line chart of test macro-F1 against share of labels for four methods"></div>
+  <p class="note">Bands show ±1 standard deviation over 3 seeds. The x-axis is logarithmic. GBM has zero spread at 100% because every seed sees the same data and the trees are deterministic.</p>
+</section>
+
+<section>
+  <h2>The gains hold seed by seed</h2>
+  <p>Each seed draws one labeled subset, which every method trains on, so I can compare methods within a seed. Each mark shows the mean gain over the CNN, with a bar for the range across the 3 seeds. SimCLR's gain shrinks steadily from +24 points to slightly negative. FixMatch's gain stays above zero in every seed up to 25%, then disappears.</p>
+  <div class="legend" id="lg2"></div>
+  <div class="chart" id="c-gain" role="img" aria-label="Paired gain over supervised CNN per label budget"></div>
+</section>
+
+<section>
+  <h2>What the gains are worth in labels</h2>
+  <p>Reading each score off the CNN's curve gives the labels the CNN would need to match it. SimCLR at 1% matches a CNN trained on about 6.7% of the labels. FixMatch at 25% matches a CNN on about 54%.</p>
+  <div class="tbl-wrap"><table id="equiv"></table></div>
+  <p class="note">Interpolated linearly in log(label share) between the measured CNN budgets. A dash means the score is above anything the CNN reached.</p>
+</section>
+
+<section>
+  <h2>Scratch is the class that separates the methods</h2>
+  <p>Macro-F1 weights all nine classes equally, so a rare class nobody can find drags every method down. Scratch is the lowest-recall class at every budget for every method. With 8 labeled scratches at 1%, all four methods find essentially none. Below full labels, the CNN finds at most a quarter of them, while FixMatch reaches 58% at 25% labels. Loc and Edge-Loc are where SimCLR's low-budget lead comes from: at 1% the CNN finds 1–3% of them and SimCLR finds 42–52%.</p>
+  <div class="seg" role="group" aria-label="Label budget" id="seg"></div>
+  <div class="tbl-wrap"><table class="heat" id="heat"></table></div>
+  <div class="scale"><span>0</span><i></i><span>1 recall</span></div>
+  <p class="note">Each thumbnail is a test wafer of that class (dark dies are defective). The count under each class is how many labeled training wafers that budget gives you. GBM never gets Scratch recall above 0.08: its summary features cannot see a thin line of dies. SimCLR's Donut recall stays at 0.63–0.77 while the CNN's climbs to 0.89. That gap is consistent across budgets, but it rests on only 111 test wafers.</p>
+</section>
+
+<section>
+  <h2>The exported model: where its 1,068 errors go</h2>
+  <p><code>export</code> picked FixMatch seed 1, the full-label run with the best validation macro-F1 (0.866). I re-scored it locally on the full test set: macro-F1 0.843, matching the 0.843 logged in Colab. Almost all of its mistakes involve the <em>none</em> class: 475 clean wafers flagged as defective and 289 defective wafers called clean.</p>
+  <div class="stats" id="screen"></div>
+  <div class="tbl-wrap"><table class="heat cm" id="cm"></table></div>
+  <div class="scale"><span>0</span><i></i><span>share of the true class (row)</span></div>
+  <div class="tbl-wrap"><table id="prf"></table></div>
+  <p class="note">Edge-Loc has the weakest precision (0.69): 275 of its 1,255 predictions are clean wafers. Loc and Edge-Loc are confused with each other 87 times. MLflow only logged recall for the sweep runs, so this is the only run with precision figures.</p>
+</section>
+
+<section>
+  <h2>Sending low-confidence wafers to an engineer</h2>
+  <p>The model's confidence matches its accuracy closely (expected calibration error 0.008), so a confidence threshold is a reliable way to route wafers. Sending every wafer under 0.9 confidence to a human means reviewing 6.6% of wafers, and it cuts automatic errors by three quarters (1,068 to 263). Macro-F1 on the wafers handled automatically rises from 0.843 to 0.941.</p>
+  <div class="chart" id="c-abs" role="img" aria-label="Macro-F1 on auto-handled wafers against share referred to review"></div>
+  <div class="tbl-wrap"><table id="abs"></table></div>
+  <p class="note">The wafers sent for review are mostly defective ones: at the 0.9 threshold, 19% of defective wafers go to a human but only 4% of clean ones do. That's probably the split you want, since defective wafers are the ones worth an engineer's time.</p>
+</section>
+
+<section>
+  <h2>Caveats</h2>
+  <div class="two">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h3>Picking a model by validation is close to a coin flip at the top</h3>
+      <p class="note" id="sel-note"></p>
+      <div class="tbl-wrap"><table id="sel"></table></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h3>Validation scores run slightly high</h3>
+      <p class="note">Each run keeps the checkpoint with the best validation score, so validation is optimistic. On average it sits this many points above test:</p>
+      <div class="tbl-wrap"><table id="gap"></table></div>
+      <h3 style="margin-top:8px">SimCLR pretraining stopped improving early</h3>
+      <p class="note">Contrastive loss fell from 2.96 to 2.34 in roughly the first 2,000 of 20,000 steps and ended at 2.28. Pretraining took 36 minutes. A flat loss doesn't prove the features stopped improving, so test a 5,000-step encoder before cutting.</p>
+      <div class="chart" id="c-loss" role="img" aria-label="SimCLR pretraining loss by step"></div>
+    </div>
+  </div>
+  <ul class="plain">
+    <li><strong>Three seeds per point.</strong> Differences under about 2 points (SimCLR vs. FixMatch at 25%, anything at 100%) agree in direction across seeds, but three seeds can't establish that they're real.</li>
+    <li><strong>Near-full has 30 test wafers</strong>, so one wafer moves its recall by 3.3 points. At 1% there is a single labeled Near-full example. Don't read anything into that class's swings.</li>
+    <li><strong>Runtime:</strong> FixMatch took 9.7 minutes per run (2.4 hours for 15 runs), slower than the 5–8 minutes I estimated. The supervised CNN and SimCLR fine-tuning took 2.8 minutes each, GBM 0.3 minutes.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Next steps</h2>
+  <ul class="plain">
+    <li><strong>Collect more Scratch labels.</strong> It is the biggest drag on macro-F1, and every neural method improves sharply on it as labels grow (CNN: 0.24 at 25% to 0.71 at 100%). A few hundred targeted scratch labels probably beat any method change.</li>
+    <li><strong>Log precision and a confusion matrix per run.</strong> The sweep logs recall only, so the false alarms on clean wafers are invisible in MLflow.</li>
+    <li><strong>Run 5 seeds at 10%, 25% and 100%</strong> to settle the close calls, especially SimCLR vs. FixMatch.</li>
+    <li><strong>Try FixMatch on top of the SimCLR encoder.</strong> The two win at different budgets, and they combine naturally.</li>
+    <li><strong>Set the deployment gate.</strong> Put <code>gate.min_macro_f1</code> just under the sample macro-F1 that <code>export</code> printed, then commit <code>models/best_model/</code>.</li>
+  </ul>
+</section>
+
+<footer>Source: <code>run_results/artifacts/runs.csv</code> and <code>mlflow.db</code> (60 sweep runs and 1 pretraining run). The confusion matrix and abstention figures come from re-running <code>run_results/models/best_model</code> on the test split in <code>artifacts/experiment_data.npz</code>.</footer>
+</main>
+
+<script>
+const DATA = {"classes":["Center","Donut","Edge-Loc","Edge-Ring","Loc","Near-full","Random","Scratch","none"],"fractions":[0.01,0.05,0.1,0.25,1.0],"summary":{"gbm":[{"f":0.01,"mean":0.5399,"std":0.0071,"min":0.5334,"max":0.5474},{"f":0.05,"mean":0.6539,"std":0.0071,"min":0.6458,"max":0.6593},{"f":0.1,"mean":0.6777,"std":0.0094,"min":0.6709,"max":0.6884},{"f":0.25,"mean":0.7086,"std":0.0097,"min":0.7027,"max":0.7198},{"f":1.0,"mean":0.7456,"std":0.0,"min":0.7456,"max":0.7456}],"cnn":[{"f":0.01,"mean":0.426,"std":0.025,"min":0.4043,"max":0.4533},{"f":0.05,"mean":0.6212,"std":0.0247,"min":0.5927,"max":0.6355},{"f":0.1,"mean":0.7181,"std":0.0064,"min":0.7113,"max":0.724},{"f":0.25,"mean":0.7925,"std":0.0075,"min":0.7853,"max":0.8003},{"f":1.0,"mean":0.8498,"std":0.0102,"min":0.8424,"max":0.8614}],"simclr":[{"f":0.01,"mean":0.6624,"std":0.0165,"min":0.6485,"max":0.6806},{"f":0.05,"mean":0.7506,"std":0.0037,"min":0.7471,"max":0.7544},{"f":0.1,"mean":0.7761,"std":0.0171,"min":0.7589,"max":0.7931},{"f":0.25,"mean":0.8071,"std":0.0092,"min":0.7976,"max":0.8159},{"f":1.0,"mean":0.8382,"std":0.0101,"min":0.8304,"max":0.8497}],"fixmatch":[{"f":0.01,"mean":0.5116,"std":0.0358,"min":0.4818,"max":0.5513},{"f":0.05,"mean":0.7155,"std":0.0147,"min":0.6987,"max":0.7256},{"f":0.1,"mean":0.7443,"std":0.0212,"min":0.72,"max":0.7595},{"f":0.25,"mean":0.8246,"std":0.005,"min":0.821,"max":0.8302},{"f":1.0,"mean":0.8512,"std":0.0143,"min":0.8428,"max":0.8678}]},"paired":{"gbm":[{"f":0.01,"mean":0.1139,"min":0.0855,"max":0.1431,"wins":3},{"f":0.05,"mean":0.0327,"min":0.0212,"max":0.0532,"wins":3},{"f":0.1,"mean":-0.0404,"min":-0.0502,"max":-0.0229,"wins":0},{"f":0.25,"mean":-0.084,"min":-0.0976,"max":-0.0722,"wins":0},{"f":1.0,"mean":-0.1042,"min":-0.1158,"max":-0.0968,"wins":0}],"simclr":[{"f":0.01,"mean":0.2364,"min":0.2273,"max":0.2442,"wins":3},{"f":0.05,"mean":0.1294,"min":0.1117,"max":0.1575,"wins":3},{"f":0.1,"mean":0.058,"min":0.0475,"max":0.0741,"wins":3},{"f":0.25,"mean":0.0146,"min":0.0076,"max":0.0239,"wins":3},{"f":1.0,"mean":-0.0116,"min":-0.0268,"max":0.0073,"wins":1}],"fixmatch":[{"f":0.01,"mean":0.0856,"min":0.0776,"max":0.098,"wins":3},{"f":0.05,"mean":0.0943,"min":0.0869,"max":0.106,"wins":3},{"f":0.1,"mean":0.0261,"min":0.001,"max":0.042,"wins":3},{"f":0.25,"mean":0.032,"min":0.029,"max":0.0371,"wins":3},{"f":1.0,"mean":0.0014,"min":-0.0183,"max":0.0222,"wins":2}]},"recall":{"gbm":{"0.01":[0.7645,0.5255,0.2383,0.8361,0.1235,0.3889,0.6898,0.0028,0.9875],"0.05":[0.8262,0.6366,0.4297,0.9084,0.2535,0.7111,0.7649,0.0182,0.9868],"0.1":[0.849,0.7447,0.4689,0.9275,0.312,0.7667,0.7861,0.0196,0.9866],"0.25":[0.865,0.7838,0.5347,0.9334,0.3709,0.8444,0.8015,0.0392,0.9845],"1.0":[0.8941,0.8649,0.5954,0.9432,0.4944,0.9667,0.7977,0.0798,0.9796]},"cnn":{"0.01":[0.3923,0.003,0.0119,0.8743,0.033,0.7444,0.6397,0.0014,0.9987],"0.05":[0.7722,0.5375,0.3125,0.9244,0.2279,0.7778,0.7803,0.0084,0.9976],"0.1":[0.8405,0.7027,0.5864,0.9475,0.4735,0.8111,0.8189,0.0476,0.9956],"0.25":[0.8805,0.8108,0.7264,0.9632,0.6021,0.8778,0.815,0.2395,0.9936],"1.0":[0.9096,0.8949,0.7916,0.9721,0.7595,0.8556,0.8247,0.7059,0.9865]},"simclr":{"0.01":[0.8168,0.4925,0.5234,0.9229,0.4215,0.8,0.7399,0.049,0.9919],"0.05":[0.8797,0.6306,0.7164,0.9542,0.5729,0.8889,0.8439,0.2017,0.9901],"0.1":[0.8801,0.6607,0.7254,0.9737,0.6031,0.8444,0.7765,0.3039,0.9918],"0.25":[0.9073,0.6817,0.7829,0.9781,0.6806,0.8778,0.8304,0.4468,0.9893],"1.0":[0.8995,0.7688,0.7726,0.9809,0.7883,0.8333,0.8671,0.7073,0.9868]},"fixmatch":{"0.01":[0.7633,0.4354,0.1021,0.8826,0.0794,0.9556,0.4586,0.0014,0.996],"0.05":[0.8296,0.7027,0.6962,0.9502,0.5292,0.7556,0.7071,0.0266,0.9925],"0.1":[0.8716,0.7267,0.71,0.9298,0.6685,0.8111,0.7514,0.1485,0.9839],"0.25":[0.8665,0.8498,0.7052,0.9811,0.6825,0.8,0.7823,0.5812,0.9892],"1.0":[0.9282,0.8769,0.8099,0.9664,0.7006,0.9333,0.9133,0.7367,0.9872]}},"gap":{"gbm":[-0.0326,0.0037,0.0193,0.0078,-0.0112],"cnn":[0.0108,0.0324,0.0229,0.0039,0.0019],"simclr":[0.0221,0.0298,0.0233,0.0315,0.0177],"fixmatch":[-0.0048,0.0156,0.0112,0.0071,0.011]},"full":[{"series":"fixmatch","seed":1,"val":0.8664,"test":0.8432,"run":"c7ce1eb6"},{"series":"simclr","seed":0,"val":0.8639,"test":0.8497,"run":"c1d60cf4"},{"series":"fixmatch","seed":0,"val":0.8623,"test":0.8428,"run":"5edce117"},{"series":"simclr","seed":2,"val":0.8583,"test":0.8304,"run":"87ea36e5"},{"series":"cnn","seed":0,"val":0.858,"test":0.8424,"run":"fceb9cb6"},{"series":"fixmatch","seed":2,"val":0.8579,"test":0.8678,"run":"29b366c4"},{"series":"cnn","seed":1,"val":0.8555,"test":0.8614,"run":"88226b35"},{"series":"simclr","seed":1,"val":0.8455,"test":0.8346,"run":"063800d0"},{"series":"cnn","seed":2,"val":0.8415,"test":0.8456,"run":"5f81ba56"},{"series":"gbm","seed":2,"val":0.7344,"test":0.7456,"run":"e0f3ebe9"},{"series":"gbm","seed":1,"val":0.7344,"test":0.7456,"run":"45d8ca0f"},{"series":"gbm","seed":0,"val":0.7344,"test":0.7456,"run":"43d4478a"}],"conf":{"labels":["Center","Donut","Edge-Loc","Edge-Ring","Loc","Near-full","Random","Scratch","none"],"cm":[[791,6,2,0,5,0,1,1,53],[1,101,0,0,5,0,3,1,0],[2,1,868,24,19,5,31,3,85],[0,0,35,1879,0,0,1,1,20],[11,7,68,0,523,0,10,15,84],[0,0,0,0,0,26,4,0,0],[5,4,1,0,0,3,160,0,0],[0,3,6,0,20,0,0,162,47],[45,3,275,11,100,0,23,18,29023]],"precision":[0.9251461988304094,0.808,0.6916334661354582,0.9817136886102403,0.7782738095238095,0.7647058823529411,0.6866952789699571,0.8059701492537313,0.9901405567685589],"recall":[0.9208381839348079,0.9099099099099099,0.8362235067437379,0.9705578512396694,0.7284122562674095,0.8666666666666667,0.9248554913294798,0.680672268907563,0.983897213370398],"f1":[0.9229871645274212,0.8559322033898306,0.7570867858700393,0.9761038961038961,0.7525179856115108,0.8125,0.7881773399014779,0.7380410022779044,0.9870090120727767],"support":[859,111,1038,1936,718,30,173,238,29498]},"abstain":[{"t":0,"coverage":1.0,"referred":0,"macro_f1":0.843372821083873,"defect_cov":1.0,"err":1068},{"t":0.5,"coverage":0.9956070633796711,"referred":152,"macro_f1":0.8544541373315725,"defect_cov":0.9847148736037625,"err":974},{"t":0.6,"coverage":0.983931100257218,"referred":556,"macro_f1":0.8759684940210557,"defect_cov":0.9445424260239075,"err":784},{"t":0.7,"coverage":0.9718794254501315,"referred":973,"macro_f1":0.8997521615973807,"defect_cov":0.91005291005291,"err":607},{"t":0.8,"coverage":0.9561573364931649,"referred":1517,"macro_f1":0.9198139957399467,"defect_cov":0.8640015677052714,"err":428},{"t":0.9,"coverage":0.9337302390104332,"referred":2293,"macro_f1":0.9412073305116044,"defect_cov":0.8058005095042132,"err":263},{"t":0.95,"coverage":0.9098002947891679,"referred":3121,"macro_f1":0.9592790513022401,"defect_cov":0.7466196355085244,"err":159},{"t":0.99,"coverage":0.8383861738100055,"referred":5592,"macro_f1":0.9660081727939461,"defect_cov":0.6257103664511072,"err":61}],"thumbs":{"Center":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAgICAgIBAQEBAQEBAgIBAQEBAQEBAQICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAQEBAQEBAQICAQEBAQEBAQECAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgICAgEBAQEBAQECAgEBAQEBAQEBAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgIBAQICAgICAgIBAQECAgEBAQEBAQEBAQEBAQICAgICAQECAgEBAQICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAQECAgICAgICAQEBAgIBAQEBAQEBAQEBAQECAgICAgEBAgIBAQECAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgEBAgICAgICAgEBAQICAQEBAQEBAQEBAQEBAgICAgIBAQICAQEBAgIAAAAAAAAAAAAAAAAAAAAAAAAAAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAgIAAAAAAAAAAAAAAAAAAAAAAAICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQICAAAAAAAAAAAAAAAAAAAAAgIBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAgICAQEBAQEBAQEBAQEBAQEBAQICAgAAAAAAAAAAAAAAAAICAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQICAgEBAQEBAQEBAQEBAQEBAQECAgIAAAAAAAAAAAAAAAACAgEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQECAgIBAQEBAQEBAQEBAQEBAQEBAgICAAAAAAAAAAAAAQEBAgIBAQEBAQEBAQECAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQAAAAAAAAAAAAEBAQICAQEBAQEBAQEBAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEAAAAAAAAAAAABAQEBAQICAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAgICAgICAgEBAQEBAQEBAQEBAQEBAQEBAgIAAAAAAAAAAQEBAQECAgEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQICAgICAgIBAQEBAQEBAQEBAQEBAQEBAQICAAAAAAAAAAEBAQEBAgIBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQECAgICAgICAQEBAQEBAQEBAQEBAQEBAQECAgAAAAAAAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQECAgEBAQICAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEAAAAAAAEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAgIBAQECAgEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAAAAAAABAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQICAQEBAgIBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQAAAAAAAgIBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgIBAQEBAQEBAQEBAgIBAQEBAQEBAgICAQECAgAAAAICAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAQEBAQEBAQEBAQICAQEBAQEBAQICAgEBAgIAAAABAQICAgICAgIBAQEBAQEBAQEBAQECAgIBAQICAgICAgICAgICAgEBAQEBAQECAgEBAQEBAQEBAQEBAQICAAAAAQECAgICAgICAQEBAQEBAQEBAQEBAgICAQECAgICAgICAgICAgIBAQEBAQEBAgIBAQEBAQEBAQEBAQECAgAAAAEBAgICAgICAgEBAQEBAQEBAQEBAQICAgEBAgICAgICAgICAgICAQEBAQEBAQICAQEBAQEBAQEBAQEBAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAgICAgICAgEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAgICAgICAgIBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQICAgEBAQEBAgIBAQICAgEBAQEBAQECAgEBAQICAgICAgICAgICAgICAQEBAQEBAQICAQEBAQEBAQICAgEBAgICAgIBAQEBAQICAQECAgIBAQEBAQEBAgIBAQECAgICAgICAgICAgICAgEBAQEBAQECAgEBAQEBAQECAgIBAQICAgICAQEBAQECAgEBAgICAQEBAQEBAQICAQEBAgICAgICAgICAgICAgIBAQEBAQEBAgIBAQEBAQEBAgICAQECAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAgICAgICAgEBAQEBAQEBAQEBAQEBAQEBAQECAgICAAAAAgIBAQEBAQEBAgICAQEBAQEBAQEBAQEBAQECAgICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgAAAAICAQEBAQEBAQICAgEBAQEBAQEBAQEBAQEBAgICAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIAAAACAgEBAQEBAQECAgIBAQEBAQEBAQEBAQEBAQICAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAAAAAQEBAQEBAQICAQEBAQEBAQEBAQEBAgICAQEBAQEBAQICAQECAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAEBAQEBAQECAgEBAQEBAQEBAQEBAQICAgEBAQEBAQECAgEBAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAABAQEBAQICAQECAgICAgEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAQEBAQECAgEBAgICAgIBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAEBAQEBAgIBAQICAgICAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgAAAAAAAAABAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIAAAAAAAAAAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQECAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAAAAAAAAAAEBAQEBAgIBAQEBAQEBAQEBAgIBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQICAgEBAQECAgIAAAAAAAAAAAABAQEBAQICAQEBAQEBAQEBAQICAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQECAgIBAQEBAgICAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQECAgIBAQEBAQEBAQEBAQICAgAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAgICAQEBAQEBAQEBAQECAgIAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQICAgEBAQEBAQEBAQEBAgICAAAAAAAAAAAAAAAAAAABAQICAgEBAQECAgICAgICAgEBAQECAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgAAAAAAAAAAAAAAAAAAAAAAAQECAgIBAQEBAgICAgICAgIBAQEBAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAgIBAQICAgEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQICAQECAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQICAQECAgIBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQECAgEBAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQECAgEBAgICAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAgIBAQICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgIBAQEBAQEBAQEBAQECAgEBAQEBAQECAgICAgEBAQEBAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAQEBAQEBAQEBAQEBAgIBAQEBAQEBAgICAgIBAQEBAQICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAgIBAQECAgICAQEBAQEBAQEBAQICAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQICAQEBAgICAgEBAQEBAQEBAQECAgEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQECAgEBAQICAgIBAQEBAQEBAQEBAgIBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQICAgICAQECAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQECAgICAgEBAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==","Donut":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgEBAQIBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgIBAQECAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgEBAgICAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIBAQICAgEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgEBAQEBAQEBAgEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIBAQEBAQEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAgIBAQEBAQEBAQEBAgICAgEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAEBAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAABAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAABAgIBAQEBAgIBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAQICAQEBAQICAQEBAgEBAQEBAQEBAQEBAQEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAEBAQICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAgIBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQIBAQAAAAAAAAAAAAICAQICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAQECAQEAAAAAAAAAAAEBAQIBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAgICAgICAgEBAQEBAQEBAQEBAQICAQEBAQEBAAAAAAAAAAACAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIBAgICAgICAgICAgICAgECAgEBAQEBAQEBAQEBAQECAgIAAAAAAAAAAgEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAQICAgICAgICAgICAgIBAgIBAQEBAQEBAQEBAQEBAgICAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQECAgEBAQECAgECAgECAgICAgICAgICAQICAQEBAQEBAQEBAQEBAQEBAgAAAAAAAgICAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQECAQEBAQEBAQICAgICAgICAgEBAQEBAQEBAQEBAQECAgECAgAAAAICAgEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAgEBAQEBAQECAgICAgICAgIBAQEBAQEBAQEBAQEBAgIBAgIAAAABAQEBAQEBAQEBAQEBAQEBAQICAgICAgEBAQIBAQECAgEBAQICAgICAgICAgEBAQEBAQEBAQEBAQEBAgEBAAAAAQEBAQEBAQEBAQECAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQECAgICAgIBAQEBAQEBAQEBAQEBAQEBAQAAAAEBAQEBAQEBAQEBAgEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAQEBAQEBAQEBAQEBAQEBAQEAAQEBAQECAgEBAQEBAQEBAQIBAQICAgECAgEBAQEBAQECAgICAQEBAgICAgICAgEBAQEBAQEBAQEBAQICAQEBAAEBAQEBAgIBAQEBAQEBAQECAQECAgIBAgIBAQEBAQEBAgICAgEBAQICAgICAgIBAQEBAQEBAQEBAQECAgEBAQACAgEBAQEBAQEBAQEBAQEBAgEBAgICAQEBAQEBAQICAQEBAQEBAQEBAQECAgICAgIBAQEBAQEBAQEBAQEBAQECAQEBAQIBAQEBAQEBAQEBAQICAgICAgIBAQEBAQIBAQEBAQEBAQICAQICAgICAgICAgEBAQEBAQEBAgEBAQICAgEBAQECAQEBAQEBAQEBAQECAgICAgICAQEBAQECAQEBAQEBAQECAgECAgICAgICAgIBAQEBAQEBAQIBAQECAgIBAQEBAQEBAQEBAQEBAQICAQEBAQICAQEBAQEBAQEBAgEBAQEBAQECAgIBAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQICAgEBAQEBAQEBAQEBAQICAgEBAQEBAQICAgEBAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAQECAgIBAQEBAQEBAQEBAQECAgIBAQEBAQECAgIBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAQEBAQEBAQEBAQEBAQEBAQECAQECAgICAgIBAQEBAQEBAQEBAQEBAQECAgIBAQEBAQEBAQEBAQEBAQECAgICAgICAgEBAQIBAQEBAQEBAQEBAQEBAgICAgICAQEBAgEBAQEBAQICAQEBAAICAQEBAQEBAQEBAQEBAQEBAgICAgICAgIBAQECAQEBAQEBAQEBAQEBAQICAgICAgEBAQIBAQEBAQECAgEBAQAAAAEBAQEBAQEBAQEBAQEBAQICAQICAgEBAQEBAQEBAgEBAQEBAQEBAQECAgICAQEBAgIBAQEBAQEBAQEBAQEAAAABAQEBAQEBAQEBAQEBAQECAgECAgIBAQEBAQEBAQIBAQEBAQEBAQEBAgICAgEBAQICAQEBAQEBAQEBAQEBAAAAAQEBAQEBAQEBAQEBAQEBAQECAgICAQECAQEBAQEBAQEBAQEBAQECAgICAgEBAQIBAQECAgEBAQEBAQEBAQAAAAEBAQEBAQEBAQEBAQEBAQEBAgICAgICAgEBAQEBAQEBAQEBAQEBAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEAAAABAQEBAQEBAQEBAQEBAQEBAQICAgICAgIBAQEBAQEBAQEBAQEBAQICAgICAQEBAQEBAQEBAQEBAQEBAQEBAAAAAgIBAQEBAQECAQEBAQEBAQECAgICAgICAgICAQEBAQEBAQICAgICAgICAgIBAQEBAQIBAQEBAQEBAQEAAAAAAAAAAQEBAQEBAQEBAgEBAQEBAQICAgEBAgICAQEBAQEBAQECAQECAgIBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAEBAQEBAQEBAQIBAQEBAQECAgIBAQICAgEBAQEBAQEBAgEBAgICAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAACAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAgIBAQECAgEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQIAAAAAAAAAAAICAQEBAQEBAQICAQEBAQICAQEBAQEBAgICAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEAAAAAAAAAAAACAgEBAQEBAQECAgEBAQECAgEBAQEBAQICAgEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAgEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAAAAAAAAAAAAAAAAAAIBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgAAAAAAAAAAAAAAAAAAAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQEBAQEBAQECAgAAAAAAAAAAAAAAAAAAAAICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAQEBAQEBAQEBAgIAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQECAgIBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQEBAQIBAQEBAQIBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAQEBAQECAQEBAQECAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQICAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQECAgEBAQECAgEBAQEBAQEBAQEBAQICAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQECAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAECAgEBAQIBAQEBAgEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==","Edge-Loc":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgIBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgICAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQICAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQECAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQICAgICAgICAgICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQECAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgIBAQEBAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAQEBAQICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQECAgICAgICAgEBAgICAgICAgICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAACAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAABAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAgICAgICAgICAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQECAQECAgICAgICAgICAgICAgICAgICAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAgEBAgICAgICAgICAgICAgICAgICAgAAAAAAAAABAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQICAgICAgICAgICAgICAgIAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQECAgICAgICAgICAgIAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAgICAgICAgICAgICAAAAAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAgICAgACAgEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQICAgIBAgICAgICAgICAgIAAgIBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQECAgICAQICAgICAgICAgICAAEBAgIBAQICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgABAQICAQECAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAgIAAQEBAQICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAgICAgEBAgICAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgIBAQICAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAgICAgICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAgICAgICAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgICAgICAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAgICAgICAgICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAgICAgICAgICAgICAgEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgICAgICAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAQEBAgICAgICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAgEBAQICAgICAgICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgIBAQECAgICAgICAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQECAgICAgEBAQECAgICAgICAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAgICAgIBAQEBAgICAgICAgICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgIBAQEBAQACAgICAgICAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAQEBAQEAAAACAgICAQICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAAAAAgICAgICAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQEBAQEBAQEBAQAAAAICAgICAgICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAQEBAQEBAQEBAQEAAAACAgICAgICAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgAAAAAAAAACAgICAgICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIAAAAAAAAAAgICAgICAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAAAAAAAAAAICAgICAgICAgIBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAgIBAQEAAAAAAAAAAAACAgICAgICAgICAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQICAQEBAAAAAAAAAAAAAAACAgICAgICAgEBAQEBAQEBAQEBAgEBAgIBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAgIBAQEBAQAAAAAAAAAAAAAAAAICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQECAgAAAAAAAAAAAAAAAAACAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAgIAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAICAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQECAgICAgEBAQEBAgIBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgIBAQEBAQEBAQEBAQECAgEBAQICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAQEBAQEBAQEBAQEBAgIBAQECAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==","Edge-Ring":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAQEBAQEBAQEBAQEBAQEBAQICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAQEBAQEBAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgEBAQEBAQICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAAAAAAAAAAAAAAAAAAAAAAAAAAACAgEBAQEBAQEBAQEBAQEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIAAAAAAAAAAAAAAAAAAAAAAAICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgAAAAAAAAAAAAAAAAAAAAACAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgAAAAAAAAAAAAAAAAACAgIBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIAAAAAAAAAAAAAAAACAgEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgAAAAAAAAAAAAAAAgIBAQEBAQEBAgEBAQEBAQEBAQEBAQEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIAAAAAAAAAAAAAAAICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAAAAAAAAAAAAAgICAQICAQEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgEBAQEBAQEBAQEBAQEBAgIAAAAAAAAAAAICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAgEBAQECAAAAAAAAAAICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAAAAAAACAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAgECAgAAAAAAAgICAgEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIAAAAAAAICAgIBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAAAAAAICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIAAAACAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAAAAAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgAAAAIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgEBAQEBAQEBAQEBAQEBAQEBAQIAAgICAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQICAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgIBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAQEBAQEBAQEBAQEBAQEBAQICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgEBAQEBAQEBAgICAgICAgEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQEBAQEBAQEBAQEBAQEBAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQECAgICAgEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIAAAICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAAACAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAAAAAgEBAQEBAQEBAQEBAQEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgAAAAICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQEBAQEBAQEBAQIAAAACAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAAAAAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgAAAAACAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgAAAAAAAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAgIAAAAAAAICAgECAgIBAQEBAQEBAQEBAQEBAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAAAAAAAAAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQIAAAAAAAAAAAICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAQEBAgEBAQEBAQEBAQEBAQEBAQEBAQICAAAAAAAAAAAAAAIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIBAQEBAQEBAQEBAQECAAAAAAAAAAAAAAACAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAQEBAQEBAQEBAQEBAgAAAAAAAAAAAAAAAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIAAAAAAAAAAAAAAAACAgIBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAgEBAQEBAQEBAQEBAQEBAQECAgIAAAAAAAAAAAAAAAAAAAICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAAAAAAAAAAAAAAAAAAACAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIAAAAAAAAAAAAAAAAAAAAAAAACAgEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgEBAQEBAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgIBAQEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgEBAQEBAQEBAQEBAQEBAQECAQEBAQEBAQEBAQICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgIBAgEBAQIBAQEBAQEBAQEBAgEBAQECAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgEBAQEBAQEBAQIBAQECAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==","Loc":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgEBAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgIBAQAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAQEBAQAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgEBAQEAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgIBAQEBAQEAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAQEBAQEBAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAEBAQEBAQEBAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAABAQEBAQEBAQICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAQEBAQEBAgICAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAEBAQEBAQICAgICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAEBAQECAgICAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAABAQEBAgICAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAABAQEBAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAQEBAQICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAABAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==","Near-full":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAgICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgEBAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAICAQECAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAACAgEBAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAAAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==","Random":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgECAgICAgEBAgICAgECAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAgIBAgICAgIBAQICAgIBAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgIBAQEBAgICAQECAQECAgEBAQEBAQEBAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAQEBAQICAgEBAgEBAgIBAQEBAQEBAQICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgIBAQICAgICAgICAQEBAQECAgEBAQEBAQEBAQECAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgIBAgICAgECAgICAQICAQECAgICAgEBAQICAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAQICAgIBAgICAgECAgEBAgICAgIBAQECAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgEBAgEBAgIBAgICAgIBAQICAgICAQEBAQIBAQICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgIBAQIBAQICAQICAgICAQECAgICAgEBAQECAQECAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAACAgEBAQEBAgEBAgICAQEBAQIBAQEBAgEBAgICAgICAgICAQEBAQECAgICAgICAgAAAAAAAAAAAAAAAAAAAAICAQEBAgIBAQEBAQICAQEBAgIBAgICAgICAgICAQEBAgIBAQICAgEBAgICAQECAgICAgAAAAAAAAAAAAAAAAACAgEBAQICAQEBAQECAgEBAQICAQICAgICAgICAgEBAQICAQECAgIBAQICAgEBAgICAgIAAAAAAAAAAAAAAAACAgICAgECAgEBAQEBAgICAQECAgIBAQEBAgEBAgICAgEBAQICAgICAQECAQECAgIBAQICAgAAAAAAAAAAAAAAAgICAgIBAgIBAQEBAQICAgEBAgICAQEBAQIBAQICAgIBAQECAgICAgEBAgEBAgICAQECAgIAAAAAAAAAAAAAAAICAgEBAQICAgIBAQECAgICAgICAQEBAgICAQECAgEBAgEBAgIBAgICAgICAgICAQICAQECAAAAAAAAAAAAAgICAgIBAQIBAQICAgEBAQEBAQEBAQIBAQEBAQEBAgICAgICAgEBAgICAgICAgICAgEBAQICAgICAAAAAAAAAAICAgICAQECAQECAgIBAQEBAQEBAQECAQEBAQEBAQICAgICAgIBAQICAgICAgICAgIBAQECAgICAgAAAAAAAAACAgIBAQEBAQEBAQEBAQEBAQICAgICAgEBAgICAQECAgICAQICAgICAgIBAQECAgICAQICAQECAgIAAAAAAAAAAgICAQEBAQEBAQEBAQEBAQECAgICAgIBAQICAgEBAgICAgECAgICAgICAQEBAgICAgECAgEBAgICAAAAAAACAgICAQICAQEBAQECAgIBAQICAQICAgIBAgIBAQICAgEBAgIBAgIBAQICAgICAgEBAQEBAgIBAQIBAQICAAAAAgICAgECAgICAgEBAgICAgIBAQICAgEBAQICAQECAgICAgEBAgEBAQECAgICAgICAgEBAgICAQEBAQECAgAAAAICAgIBAgICAgIBAQICAgICAQECAgIBAQECAgEBAgICAgIBAQIBAQEBAgICAgICAgIBAQICAgEBAQEBAgIAAAACAgEBAgICAQECAgIBAQIBAQICAQEBAgICAQECAgICAgEBAQECAgIBAQEBAQICAQICAgIBAgICAgEBAQICAAAAAgIBAQICAgEBAgICAQECAQECAgEBAQICAgEBAgICAgIBAQEBAgICAQEBAQECAgECAgICAQICAgIBAQECAgACAgICAQECAgIBAQIBAQEBAgEBAgIBAgICAgECAgICAQICAgICAgIBAQICAQEBAQECAgICAgIBAQEBAQICAgICAgICAgICAQEBAgIBAgICAgEBAQEBAQEBAgICAgICAgECAgEBAgIBAQEBAQECAgEBAQICAQECAgICAgEBAQICAgICAgICAgEBAQICAQICAgIBAQEBAQEBAQICAgICAgIBAgIBAQICAQEBAQEBAgIBAQECAgEBAgICAgIBAQECAgICAgEBAgICAQECAgEBAQICAQEBAQECAgICAgECAgEBAQICAQEBAQECAgICAgEBAgIBAgICAgIBAQEBAgEBAQECAgIBAQICAgEBAgIBAQECAgEBAQEBAgICAgIBAgIBAQECAgEBAQEBAgICAgIBAQICAQICAgICAQEBAQIBAQEBAgICAgIBAQICAgEBAQICAgIBAgIBAQEBAQICAQICAQECAQECAgEBAQICAgIBAQECAgIBAQICAQEBAgICAQECAgICAgEBAQEBAQEBAQIBAQICAgICAgIBAQECAgEBAQICAQICAgIBAQEBAQICAgICAQEBAQECAgIBAQEBAgICAgICAgIBAQEBAQEBAQECAQECAgICAgICAQEBAgIBAQECAgECAgICAQEBAQECAgICAgEBAQEBAgICAQEBAQICAgICAgICAQECAgECAgICAgEBAgICAgIBAQICAgEBAQEBAgICAgIBAQEBAQEBAgICAQECAgECAgEBAgEBAgIBAgIBAQICAgEBAgIBAgICAgIBAQICAgICAQECAgIBAQEBAQICAgICAQEBAQEBAQICAgEBAgIBAgIBAQIBAQICAQICAQECAgICAgICAgICAQECAQECAgECAgICAQICAQEBAgIBAQIBAQICAgIBAQECAgIBAQICAQEBAgIBAQECAgEBAQICAgICAgICAgICAgEBAgEBAgIBAgICAgECAgEBAQICAQECAQECAgICAQEBAgICAQECAgEBAQICAQEBAgIBAQECAgIAAAICAgIBAgICAgICAgEBAgEBAQECAgIBAQICAgICAgEBAQECAgEBAQICAQEBAQEBAgIBAQECAgICAgEBAgICAAACAgEBAgICAgICAgICAgIBAQICAgICAQEBAgICAgIBAQEBAgIBAgICAgEBAQICAQEBAQEBAgICAgECAgICAAAAAgIBAQICAgICAgICAgICAQECAgICAgEBAQICAgICAQEBAQICAQICAgIBAQECAgEBAQEBAQICAgIBAgICAgAAAAICAgICAQEBAQICAgEBAQEBAgIBAQEBAQICAgEBAgICAQEBAQEBAQEBAQEBAgIBAQECAgIBAQICAQEBAgIAAAACAgICAgEBAQECAgIBAQEBAQICAQEBAQECAgIBAQICAgEBAQEBAQEBAQEBAQICAQEBAgICAQECAgEBAQICAAAAAgICAgECAgEBAQICAgIBAQECAgECAgEBAgICAgICAgICAgICAQEBAgIBAQECAgECAgEBAgICAgICAgICAgAAAAAAAgIBAQEBAQEBAQICAgICAQEBAgICAgECAgICAgEBAgIBAQICAgICAgEBAQEBAQECAgECAgEBAQICAAAAAAAAAAICAQEBAQEBAQECAgICAgEBAQICAgIBAgICAgIBAQICAQECAgICAgIBAQEBAQEBAgIBAgIBAQECAgAAAAAAAAACAgICAgICAgICAgIBAgICAgIBAQICAQICAgICAQECAgICAgICAgICAgIBAQECAgICAQICAgICAgIAAAAAAAAAAgICAgICAgICAgICAQICAgICAQECAgECAgICAgEBAgICAgICAgICAgICAQEBAgICAgECAgICAgICAAAAAAAAAAAAAgICAgICAQECAgICAgICAgEBAQEBAQEBAQEBAQEBAgICAgICAgICAgICAQICAQECAQECAgIAAAAAAAAAAAAAAAICAgEBAQEBAQECAQECAgICAgICAgICAQECAQEBAQICAgICAQECAgICAgEBAQEBAgEBAgICAAAAAAAAAAAAAAACAgIBAQEBAQEBAgEBAgICAgICAgICAgEBAgEBAQECAgICAgEBAgICAgIBAQEBAQIBAQICAgAAAAAAAAAAAAAAAAICAgICAQECAgIBAQICAQEBAQECAgICAgIBAQICAgICAQECAgECAgICAgEBAQEBAQECAgAAAAAAAAAAAAAAAAACAgICAgEBAgICAQECAgEBAQEBAgICAgICAQECAgICAgEBAgIBAgICAgIBAQEBAQEBAgIAAAAAAAAAAAAAAAAAAAACAgEBAQEBAQEBAQEBAQEBAQECAgICAQEBAQEBAQEBAQICAQICAQECAQECAgICAgAAAAAAAAAAAAAAAAAAAAAAAAACAQECAgIBAQEBAgEBAgIBAgICAgECAgEBAQEBAgICAgECAgEBAQEBAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgEBAgICAQEBAQIBAQICAQICAgIBAgIBAQEBAQICAgIBAgIBAQEBAQICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgEBAgIBAgIBAQICAgICAgICAgIBAQEBAQEBAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgIBAQICAQICAQECAgICAgICAgICAQEBAQEBAQICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAQEBAQIBAQEBAgICAgIBAQECAgICAQICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgIBAQECAgECAgICAgEBAgIBAQIBAQICAQICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAQEBAgIBAgICAgIBAQICAQECAQECAgECAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAgICAgIBAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAQICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==","Scratch":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQABAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEAAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAAABAQEBAQEAAQEBAQEBAQEBAQAAAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAABAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAQEBAQEBAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgAAAAAAAAAAAAAAAAABAQEBAQEBAQECAQEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgAAAAAAAAAAAAAAAQEBAQEBAQEBAgEBAQEBAQEBAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIAAAAAAAAAAAAAAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgAAAAAAAAAAAAEBAQEBAQEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAABAQEBAQEBAQEBAQEBAQEBAQECAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAQECAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgICAgICAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAEBAQEBAQEBAQEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAgICAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAICAgEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==","none":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQICAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQECAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgEBAQEBAgIBAQICAgEBAgICAgICAgEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgIBAQEBAQICAQECAgIBAQICAgICAgIBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAQEBAQECAgEBAgICAQECAgICAgICAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQICAgEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQECAgIBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAgIBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQICAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQECAgEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgIBAQEBAgICAQECAgICAgEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAICAgICAQEBAQICAgEBAgICAgIBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAQECAgICAgEBAQEBAQEBAQEBAQEBAQECAgIBAQEBAQEBAQEBAQEBAQEBAgICAQECAgAAAAAAAAAAAAAAAAAAAAEBAgICAgIBAQEBAQEBAQEBAQEBAQEBAgICAQEBAQEBAQEBAQEBAQEBAQICAgEBAgIAAAAAAAAAAAAAAAAAAAABAQICAgICAQEBAQEBAQEBAQEBAQEBAQICAgEBAQEBAQEBAQEBAQEBAQECAgIBAQICAAAAAAAAAAAAAAAAAQEBAQEBAQICAgICAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgAAAAAAAAAAAAEBAQEBAQECAgICAgEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgIAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQECAgIBAQEBAQICAQECAgIBAQEBAQEBAQEAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAgICAQEBAQECAgEBAgICAQEBAQEBAQEBAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQICAgEBAQEBAgIBAQICAgEBAQEBAQEBAQAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgIBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQECAgICAgICAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAgEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAgIBAQECAgEBAgICAQEBAQEBAQEBAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIAAAAAAAICAQEBAgIBAQICAgEBAQEBAQEBAQICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAAACAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQECAgIBAQEBAQEBAQEBAQEBAQEBAgICAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAgICAQEBAQEBAQEBAQEBAgIBAQICAgEBAQEBAQEBAQEBAQEBAQECAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQECAgIBAQEBAQEBAQEBAQEBAQEBAgICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAgICAQEBAQEBAQEBAQEBAQEBAQICAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIBAQEBAgICAQEBAQEBAQICAQEBAQEBAQEBAQICAQECAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAQEBAQICAgEBAQEBAQECAgEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQECAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQECAgIBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAgICAgEBAQEBAgICAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgIAAAABAQEBAQEBAQEBAQEBAQEBAgICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAQEBAQEBAQEBAQEBAQEBAQAAAAAAAQEBAQEBAQEBAQEBAQEBAQICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgEBAQEBAQEBAQEBAQEBAQEAAAAAAAEBAQEBAQEBAQEBAQEBAQECAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgIBAQEBAQEBAQEBAQEBAQEBAAAAAAABAQEBAQEBAQECAgIBAQEBAQEBAQEBAQECAgEBAgICAgIBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQECAgAAAAAAAQEBAQEBAQEBAgICAQEBAQEBAQEBAQEBAgIBAQICAgICAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAgIAAAAAAAEBAQEBAQEBAQICAgEBAQEBAQEBAQEBAQICAQECAgICAgEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQICAAAAAAAAAAEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQICAgEBAgICAgIAAAAAAAAAAAABAQEBAQICAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQECAgIBAQICAgICAAAAAAAAAAAAAgICAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAICAgEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAACAgIBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAgICAgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgICAQECAgIBAQICAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAICAgIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgEBAgICAQECAgEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAEBAgICAQECAgEBAQEBAQEBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQEBAQECAgAAAAAAAAAAAAAAAAAAAAAAAAABAQICAgEBAgIBAQEBAQEBAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAgIAAAAAAAAAAAAAAAAAAAAAAAAAAQECAgIBAQICAQEBAQEBAQEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQICAQEBAQEBAQEBAQEBAQEBAQECAgICAgEBAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQECAgEBAQEBAQEBAQEBAQEBAQEBAgICAgIBAQICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAICAQEBAQEBAQEBAQICAQEBAQEBAQEBAQEBAgICAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgEBAQEBAQEBAQECAgEBAQEBAQEBAQEBAQICAgEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgIBAQEBAQEBAQEBAgIBAQEBAQEBAQEBAQECAgIBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAgICAgICAgICAgICAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="},"train_n":[3005,389,3632,6776,2515,104,606,835,103199],"test_n":[859,111,1038,1936,718,30,173,238,29498],"loss":[[100,2.957],[500,2.4813],[900,2.385],[1300,2.4005],[1700,2.3631],[2100,2.3433],[2500,2.3491],[2900,2.3048],[3300,2.3215],[3700,2.3004],[4100,2.2902],[4500,2.3039],[4900,2.2869],[5300,2.3253],[5700,2.2865],[6100,2.2785],[6500,2.2845],[6900,2.2685],[7300,2.2926],[7700,2.2948],[8100,2.2883],[8500,2.2825],[8900,2.2604],[9300,2.278],[9700,2.2767],[10100,2.2808],[10500,2.2633],[10900,2.2766],[11300,2.2897],[11700,2.2542],[12100,2.2612],[12500,2.2627],[12900,2.2803],[13300,2.2579],[13700,2.2411],[14100,2.2543],[14500,2.2622],[14900,2.2573],[15300,2.242],[15700,2.2492],[16100,2.2451],[16500,2.2513],[16900,2.2644],[17300,2.2587],[17700,2.2475],[18100,2.2368],[18500,2.2835],[18900,2.2584],[19300,2.2586],[19700,2.2569]]};
+(() => {
+const NS = "http://www.w3.org/2000/svg";
+const SERIES = [
+  { id: "gbm", short: "GBM", name: "GBM on features", v: "--s-gbm", marker: "circle" },
+  { id: "cnn", short: "CNN", name: "CNN, supervised", v: "--s-cnn", marker: "square" },
+  { id: "simclr", short: "SimCLR", name: "SimCLR + fine-tune", v: "--s-simclr", marker: "triangle" },
+  { id: "fixmatch", short: "FixMatch", name: "FixMatch", v: "--s-fixmatch", marker: "diamond" },
+];
+const byId = Object.fromEntries(SERIES.map(s => [s.id, s]));
+const F = DATA.fractions;
+const pct = f => (f * 100) + "%";
+const fmt = (x, d = 3) => x.toFixed(d);
+const pts = x => (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1);
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const color = s => `var(${s.v})`;
+
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function h(tag, attrs = {}, html = "") {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  e.innerHTML = html;
+  return e;
+}
+function marker(g, kind, x, y, r, fill) {
+  const common = { fill, stroke: "var(--bg)", "stroke-width": 1.5 };
+  if (kind === "circle") return el("circle", { cx: x, cy: y, r, ...common }, g);
+  if (kind === "square") return el("rect", { x: x - r * 0.9, y: y - r * 0.9, width: r * 1.8, height: r * 1.8, rx: 1.5, ...common }, g);
+  if (kind === "triangle") return el("path", { d: `M${x},${y - r * 1.15}L${x + r * 1.05},${y + r * 0.75}L${x - r * 1.05},${y + r * 0.75}Z`, ...common }, g);
+  return el("path", { d: `M${x},${y - r * 1.2}L${x + r * 1.05},${y}L${x},${y + r * 1.2}L${x - r * 1.05},${y}Z`, ...common }, g);
+}
+function swatch(s) { return `<span class="sw" style="background:${color(s)}"></span>`; }
+function legend(id, list) {
+  document.getElementById(id).innerHTML = list.map(s => `<span>${swatch(s)}${s.name}</span>`).join("");
+}
+function tooltip(container) {
+  let t = container.querySelector(".tip");
+  if (!t) { t = h("div", { class: "tip", hidden: "" }); container.appendChild(t); }
+  return {
+    show(html, x, y) {
+      t.innerHTML = html; t.hidden = false;
+      const w = container.clientWidth, tw = t.offsetWidth, th = t.offsetHeight;
+      let left = x + 14; if (left + tw > w) left = x - tw - 14; if (left < 0) left = 0;
+      let top = y - th / 2; if (top < 0) top = 0;
+      t.style.left = left + "px"; t.style.top = top + "px";
+    },
+    hide() { t.hidden = true; },
+  };
+}
+function svgFor(container, height) {
+  container.querySelectorAll("svg").forEach(s => s.remove());
+  const w = Math.max(280, container.clientWidth);
+  const svg = el("svg", { viewBox: `0 0 ${w} ${height}`, height });
+  container.prepend(svg);
+  return { svg, w };
+}
+function spread(ys, gap) {
+  const order = ys.map((y, i) => [y, i]).sort((a, b) => a[0] - b[0]);
+  const out = order.map(o => o[0]);
+  for (let k = 1; k < out.length; k++) if (out[k] - out[k - 1] < gap) out[k] = out[k - 1] + gap;
+  const shift = (out.reduce((a, b) => a + b, 0) - order.reduce((a, o) => a + o[0], 0)) / out.length;
+  const res = []; order.forEach((o, k) => res[o[1]] = out[k] - shift); return res;
+}
+
+/* ---------- verdict ---------- */
+function verdict() {
+  const rows = F.map((f, i) => {
+    const ranked = SERIES.map(s => ({ s, m: DATA.summary[s.id][i].mean })).sort((a, b) => b.m - a.m);
+    const best = ranked[0], second = ranked[1];
+    const gain = best.s.id === "cnn" ? 0 : DATA.paired[best.s.id][i].mean;
+    const margin = best.m - second.m;
+    let tag = margin > 0.015 ? ["clear", "Clear"] : margin > 0.005 ? ["lean", "Leans"] : ["tie", "Tie"];
+    if (f === 1.0) tag = ["tie", "Tie"];
+    const bestCell = f === 1.0 ? `${swatch(byId.fixmatch)}FixMatch ≈ ${swatch(byId.cnn)}CNN` : `${swatch(best.s)}${best.s.name}`;
+    return `<tr><td class="n">${pct(f)}</td><td class="series-name">${bestCell}</td><td class="n">${fmt(best.m)}</td><td class="n">${f === 1.0 ? "+0.1" : pts(gain)}</td><td class="n">${pts(margin)} over ${second.s.short}</td><td><span class="pill ${tag[0]}">${tag[1]}</span></td></tr>`;
+  });
+  document.getElementById("verdict").innerHTML =
+    `<thead><tr><th class="n">Labels</th><th>Best method</th><th class="n">Macro-F1</th><th class="n">Gain vs CNN</th><th class="n">Lead</th><th>Call</th></tr></thead><tbody>${rows.join("")}</tbody>`;
+}
+
+/* ---------- label-efficiency line chart ---------- */
+function effChart() {
+  const c = document.getElementById("c-eff");
+  const H = c.clientWidth < 520 ? 300 : 340;
+  const { svg, w } = svgFor(c, H);
+  const narrow = w < 560;
+  const m = { l: 40, r: narrow ? 16 : 128, t: 12, b: 36 };
+  const x0 = Math.log(0.0085), x1 = Math.log(1.15);
+  const X = f => m.l + (Math.log(f) - x0) / (x1 - x0) * (w - m.l - m.r);
+  const y0 = 0.35, y1 = 0.9;
+  const Y = v => m.t + (1 - (v - y0) / (y1 - y0)) * (H - m.t - m.b);
+  const g = el("g", {}, svg);
+  for (let v = 0.4; v <= 0.9001; v += 0.1) {
+    el("line", { x1: m.l, x2: w - m.r, y1: Y(v), y2: Y(v), stroke: "var(--grid)" }, g);
+    el("text", { x: m.l - 8, y: Y(v) + 4, "text-anchor": "end" }, g).textContent = v.toFixed(1);
+  }
+  F.forEach(f => { el("text", { x: X(f), y: H - m.b + 20, "text-anchor": "middle" }, g).textContent = pct(f); });
+  el("line", { x1: m.l, x2: w - m.r, y1: H - m.b, y2: H - m.b, stroke: "var(--axis)" }, g);
+  const guide = el("line", { y1: m.t, y2: H - m.b, stroke: "var(--axis)", "stroke-dasharray": "3 3", visibility: "hidden" }, g);
+  const ends = [];
+  SERIES.forEach(s => {
+    const d = DATA.summary[s.id];
+    const band = d.map(p => `${X(p.f)},${Y(p.mean + p.std)}`).concat(d.slice().reverse().map(p => `${X(p.f)},${Y(p.mean - p.std)}`));
+    el("polygon", { points: band.join(" "), fill: color(s), opacity: 0.14 }, g);
+  });
+  SERIES.forEach(s => {
+    const d = DATA.summary[s.id];
+    el("polyline", { points: d.map(p => `${X(p.f)},${Y(p.mean)}`).join(" "), fill: "none", stroke: color(s), "stroke-width": 2, "stroke-linejoin": "round" }, g);
+    d.forEach(p => marker(g, s.marker, X(p.f), Y(p.mean), 4.5, color(s)));
+    ends.push({ s, y: Y(d[d.length - 1].mean) });
+  });
+  if (!narrow) {
+    const ly = spread(ends.map(e => e.y), 15);
+    ends.forEach((e, i) => { el("text", { x: X(1) + 12, y: ly[i] + 4, fill: "var(--ink-2)" }, g).textContent = e.s.name; });
+  }
+  el("text", { x: m.l, y: H - 4, fill: "var(--muted)" }, g).textContent = "share of labeled training wafers →";
+  const tip = tooltip(c);
+  const hit = el("rect", { x: m.l, y: m.t, width: w - m.l - m.r, height: H - m.t - m.b, fill: "transparent" }, svg);
+  const move = ev => {
+    const r = svg.getBoundingClientRect(); const px = ev.clientX - r.left;
+    let i = 0, best = 1e9; F.forEach((f, k) => { const dd = Math.abs(X(f) - px); if (dd < best) { best = dd; i = k; } });
+    guide.setAttribute("x1", X(F[i])); guide.setAttribute("x2", X(F[i])); guide.setAttribute("visibility", "visible");
+    const rows = SERIES.map(s => ({ s, p: DATA.summary[s.id][i] })).sort((a, b) => b.p.mean - a.p.mean)
+      .map(({ s, p }) => `<div class="row"><span>${swatch(s)}${s.name}</span><b>${fmt(p.mean)} ±${fmt(p.std, 3)}</b></div>`).join("");
+    tip.show(`<div class="head">${pct(F[i])} labels</div>${rows}`, X(F[i]), ev.clientY - r.top);
+  };
+  hit.addEventListener("pointermove", move); hit.addEventListener("pointerdown", move);
+  hit.addEventListener("pointerleave", () => { tip.hide(); guide.setAttribute("visibility", "hidden"); });
+}
+
+/* ---------- paired gain chart ---------- */
+function gainChart() {
+  const c = document.getElementById("c-gain");
+  const H = 300; const { svg, w } = svgFor(c, H);
+  const m = { l: 40, r: 10, t: 12, b: 36 };
+  const arms = ["gbm", "simclr", "fixmatch"].map(id => byId[id]);
+  const y0 = -14, y1 = 26;
+  const Y = v => m.t + (1 - (v - y0) / (y1 - y0)) * (H - m.t - m.b);
+  const gw = (w - m.l - m.r) / F.length;
+  const g = el("g", {}, svg);
+  for (let v = -10; v <= 20; v += 10) {
+    el("line", { x1: m.l, x2: w - m.r, y1: Y(v), y2: Y(v), stroke: v === 0 ? "var(--axis)" : "var(--grid)", "stroke-width": v === 0 ? 1.5 : 1 }, g);
+    el("text", { x: m.l - 8, y: Y(v) + 4, "text-anchor": "end" }, g).textContent = (v > 0 ? "+" : "") + v;
+  }
+  el("text", { x: m.l + 4, y: Y(0) - 6, fill: "var(--muted)" }, g).textContent = "CNN";
+  const tip = tooltip(c);
+  F.forEach((f, i) => {
+    const cx = m.l + gw * (i + 0.5);
+    el("text", { x: cx, y: H - m.b + 20, "text-anchor": "middle" }, g).textContent = pct(f);
+    arms.forEach((s, k) => {
+      const d = DATA.paired[s.id][i];
+      const x = cx + (k - 1) * Math.min(22, gw / 4);
+      el("line", { x1: x, x2: x, y1: Y(d.min * 100), y2: Y(d.max * 100), stroke: color(s), "stroke-width": 2.5, "stroke-linecap": "round" }, g);
+      marker(g, s.marker, x, Y(d.mean * 100), 5, color(s));
+      const hit = el("rect", { x: x - 10, y: Y(d.max * 100) - 10, width: 20, height: Math.max(20, Y(d.min * 100) - Y(d.max * 100) + 20), fill: "transparent" }, svg);
+      const show = ev => {
+        const r = svg.getBoundingClientRect();
+        tip.show(`<div class="head">${pct(f)} labels</div><div class="row"><span>${swatch(s)}${s.name}</span></div><div class="row"><span>Mean gain</span><b>${pts(d.mean)}</b></div><div class="row"><span>Seed range</span><b>${pts(d.min)} to ${pts(d.max)}</b></div><div class="row"><span>Seeds beating CNN</span><b>${d.wins} / 3</b></div>`, x, ev.clientY - r.top);
+      };
+      hit.addEventListener("pointermove", show); hit.addEventListener("pointerdown", show); hit.addEventListener("pointerleave", () => tip.hide());
+    });
+  });
+}
+
+/* ---------- equivalence table ---------- */
+function equiv() {
+  const cnn = DATA.summary.cnn;
+  const lx = cnn.map(p => Math.log(p.f)), ys = cnn.map(p => p.mean);
+  const inv = v => { if (v > ys[ys.length - 1]) return null; if (v <= ys[0]) return Math.exp(lx[0]);
+    for (let k = 1; k < ys.length; k++) if (v <= ys[k]) return Math.exp(lx[k - 1] + (v - ys[k - 1]) / (ys[k] - ys[k - 1]) * (lx[k] - lx[k - 1])); };
+  const rows = ["simclr", "fixmatch", "gbm"].map(id => {
+    const s = byId[id];
+    const cells = F.slice(0, 4).map((f, i) => { const e = inv(DATA.summary[id][i].mean); return `<td class="n">${e == null ? "—" : (e * 100).toFixed(1) + "% <span style='color:var(--muted)'>(" + (e / f).toFixed(1) + "×)</span>"}</td>`; }).join("");
+    return `<tr><td class="series-name">${swatch(s)}${s.name}</td>${cells}</tr>`;
+  });
+  document.getElementById("equiv").innerHTML = `<thead><tr><th>Method trained on →</th>${F.slice(0, 4).map(f => `<th class="n">${pct(f)}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody>`;
+}
+
+/* ---------- wafer thumbnails ---------- */
+function drawWafer(cv, b64) {
+  const raw = atob(b64); const n = 64; cv.width = n; cv.height = n;
+  const ctx = cv.getContext("2d"); const img = ctx.createImageData(n, n);
+  const hex = v => { const t = document.createElement("div"); t.style.color = v; document.body.appendChild(t); const c = getComputedStyle(t).color; t.remove(); return c.match(/\d+/g).map(Number); };
+  const die = hex("var(--die)"), def = hex("var(--defect)");
+  for (let i = 0; i < n * n; i++) {
+    const v = raw.charCodeAt(i); const c = v === 2 ? def : die;
+    img.data.set([c[0], c[1], c[2], v === 0 ? 0 : 255], i * 4);
+  }
+  ctx.putImageData(img, 0, 0);
+}
+function clsCell(k, sub) {
+  return `<div class="cls"><canvas data-k="${k}" aria-hidden="true"></canvas><div>${DATA.classes[k]}<small>${sub}</small></div></div>`;
+}
+function paintThumbs(root) { root.querySelectorAll("canvas[data-k]").forEach(cv => drawWafer(cv, DATA.thumbs[DATA.classes[+cv.dataset.k]])); }
+function cellStyle(t) {
+  const p = Math.round(Math.max(0, Math.min(1, t)) * 100);
+  return `background:color-mix(in oklab, var(--seq-hi) ${p}%, var(--seq-lo));color:${t > 0.55 ? "var(--on-strong)" : "var(--ink)"}`;
+}
+
+/* ---------- recall heatmap ---------- */
+let budget = 0.01;
+function heat() {
+  const seg = document.getElementById("seg");
+  seg.innerHTML = F.map(f => `<button type="button" id="b-${f}" aria-pressed="${f === budget}">${pct(f)} labels</button>`).join("");
+  seg.querySelectorAll("button").forEach((b, i) => b.addEventListener("click", () => { budget = F[i]; heat(); }));
+  const key = String(budget === 1 ? "1.0" : budget);
+  const rows = DATA.classes.map((c, k) => {
+    const n = Math.max(1, Math.round(budget * DATA.train_n[k]));
+    const vals = SERIES.map(s => DATA.recall[s.id][key][k]);
+    const top = Math.max(...vals);
+    const cells = vals.map((v, i) => `<td class="cell" style="${cellStyle(v)}${v === top && c !== "none" ? ";font-weight:600" : ""}" title="${SERIES[i].name}: ${c} recall ${v.toFixed(2)}">${v.toFixed(2)}</td>`).join("");
+    return `<tr><th class="rowh" scope="row">${clsCell(k, n.toLocaleString() + " labeled")}</th>${cells}</tr>`;
+  });
+  const t = document.getElementById("heat");
+  t.innerHTML = `<thead><tr><th class="rowh">Class</th>${SERIES.map(s => `<th>${swatch(s)}${s.short}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody>`;
+  paintThumbs(t);
+}
+
+/* ---------- confusion matrix ---------- */
+function confusion() {
+  const { cm, labels, precision, recall, f1, support } = DATA.conf;
+  const short = { "Edge-Loc": "E-Loc", "Edge-Ring": "E-Ring", "Near-full": "N-full", Center: "Center", Donut: "Donut", Loc: "Loc", Random: "Rand", Scratch: "Scratch", none: "none" };
+  const rows = cm.map((row, i) => {
+    const tot = row.reduce((a, b) => a + b, 0);
+    return `<tr><th class="rowh" scope="row">${clsCell(i, tot.toLocaleString() + " true")}</th>${row.map((v, j) => {
+      const sh = v / tot;
+      return `<td class="cell" style="${cellStyle(i === j ? sh : Math.min(1, sh * 3))}" title="true ${labels[i]} → predicted ${labels[j]}: ${v} wafers (${(sh * 100).toFixed(1)}% of row)">${v === 0 ? "·" : v}</td>`;
+    }).join("")}</tr>`;
+  });
+  const t = document.getElementById("cm");
+  t.innerHTML = `<thead><tr><th class="rowh">True ↓ / predicted →</th>${labels.map(l => `<th>${short[l]}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody>`;
+  paintThumbs(t);
+  document.getElementById("prf").innerHTML = `<thead><tr><th>Class</th><th class="n">Precision</th><th class="n">Recall</th><th class="n">F1</th><th class="n">Test wafers</th></tr></thead><tbody>${labels.map((l, i) =>
+    `<tr><td>${l}</td><td class="n">${fmt(precision[i])}</td><td class="n">${fmt(recall[i])}</td><td class="n">${fmt(f1[i])}</td><td class="n">${support[i].toLocaleString()}</td></tr>`).join("")}</tbody>`;
+  const none = labels.indexOf("none");
+  let tp = 0, fn = 0, fp = 0, defTot = 0, cleanTot = 0;
+  cm.forEach((row, i) => row.forEach((v, j) => {
+    if (i !== none) { defTot += v; if (j !== none) tp += v; else fn += v; } else { cleanTot += v; if (j !== none) fp += v; }
+  }));
+  const stats = [
+    [(tp / defTot * 100).toFixed(1) + "%", `of defective wafers flagged as some defect (${fn} missed)`],
+    [(fp / cleanTot * 100).toFixed(1) + "%", `of clean wafers falsely flagged (${fp} of ${cleanTot.toLocaleString()})`],
+    [(tp / (tp + fp) * 100).toFixed(1) + "%", "of flagged wafers are really defective"],
+  ];
+  document.getElementById("screen").innerHTML = stats.map(([v, k]) => `<div class="stat"><span class="v">${v}</span><span class="k">${k}</span></div>`).join("");
+}
+
+/* ---------- abstention ---------- */
+function abstain() {
+  const A = DATA.abstain;
+  const c = document.getElementById("c-abs");
+  const H = 260; const { svg, w } = svgFor(c, H);
+  const m = { l: 44, r: 20, t: 14, b: 38 };
+  const X = v => m.l + v / 17 * (w - m.l - m.r);
+  const Y = v => m.t + (1 - (v - 0.83) / (0.98 - 0.83)) * (H - m.t - m.b);
+  const g = el("g", {}, svg);
+  [0.85, 0.9, 0.95].forEach(v => { el("line", { x1: m.l, x2: w - m.r, y1: Y(v), y2: Y(v), stroke: "var(--grid)" }, g); el("text", { x: m.l - 8, y: Y(v) + 4, "text-anchor": "end" }, g).textContent = v.toFixed(2); });
+  [0, 5, 10, 15].forEach(v => el("text", { x: X(v), y: H - m.b + 20, "text-anchor": "middle" }, g).textContent = v + "%");
+  el("line", { x1: m.l, x2: w - m.r, y1: H - m.b, y2: H - m.b, stroke: "var(--axis)" }, g);
+  el("text", { x: m.l, y: H - 4, fill: "var(--muted)" }, g).textContent = "share of wafers sent to review →";
+  const P = A.map(a => [X((1 - a.coverage) * 100), Y(a.macro_f1)]);
+  el("polyline", { points: P.map(p => p.join(",")).join(" "), fill: "none", stroke: "var(--s-gbm)", "stroke-width": 2 }, g);
+  const tip = tooltip(c);
+  A.forEach((a, i) => {
+    marker(g, "circle", P[i][0], P[i][1], 4.5, "var(--s-gbm)");
+    if ([0, 0.7, 0.9, 0.99].includes(a.t)) el("text", { x: P[i][0] + (a.t === 0.99 ? -8 : 8), y: P[i][1] + (a.t === 0 ? -8 : 16), "text-anchor": a.t === 0.99 ? "end" : "start", fill: "var(--ink-2)" }, g).textContent = a.t === 0 ? "no review" : "conf < " + a.t;
+    const hit = el("circle", { cx: P[i][0], cy: P[i][1], r: 14, fill: "transparent" }, svg);
+    const show = () => tip.show(`<div class="head">Review if confidence &lt; ${a.t}</div><div class="row"><span>Sent to review</span><b>${a.referred.toLocaleString()} (${((1 - a.coverage) * 100).toFixed(1)}%)</b></div><div class="row"><span>Auto macro-F1</span><b>${fmt(a.macro_f1)}</b></div><div class="row"><span>Auto errors</span><b>${a.err.toLocaleString()}</b></div>`, P[i][0], P[i][1]);
+    hit.addEventListener("pointerenter", show); hit.addEventListener("pointerdown", show); hit.addEventListener("pointerleave", () => tip.hide());
+  });
+  document.getElementById("abs").innerHTML = `<thead><tr><th class="n">Review if conf. &lt;</th><th class="n">Wafers to review</th><th class="n">Auto macro-F1</th><th class="n">Auto errors</th><th class="n">Defective wafers auto-handled</th></tr></thead><tbody>${A.map(a =>
+    `<tr><td class="n">${a.t === 0 ? "—" : a.t}</td><td class="n">${a.referred.toLocaleString()} (${((1 - a.coverage) * 100).toFixed(1)}%)</td><td class="n">${fmt(a.macro_f1)}</td><td class="n">${a.err.toLocaleString()}</td><td class="n">${(a.defect_cov * 100).toFixed(1)}%</td></tr>`).join("")}</tbody>`;
+}
+
+/* ---------- caveat tables ---------- */
+function caveats() {
+  const full = DATA.full.filter(r => r.series !== "gbm");
+  const bestTest = Math.max(...full.map(r => r.test));
+  document.getElementById("sel").innerHTML = `<thead><tr><th class="n">Val rank</th><th>Run</th><th class="n">Val</th><th class="n">Test</th></tr></thead><tbody>${full.map((r, i) =>
+    `<tr${i === 0 ? ' style="font-weight:600"' : ""}><td class="n">${i + 1}</td><td class="series-name">${swatch(byId[r.series])}${byId[r.series].short} seed ${r.seed}${i === 0 ? " · exported" : ""}${r.test === bestTest ? " · best test" : ""}</td><td class="n">${fmt(r.val)}</td><td class="n">${fmt(r.test)}</td></tr>`).join("")}</tbody>`;
+  document.getElementById("sel-note").textContent = "The nine full-label neural runs fall within 2.5 validation points of each other, and validation order barely predicts test order. The exported run is 5th of 9 on test, and the best test run (FixMatch seed 2) was 6th on validation. Any of the top five runs is a reasonable choice. Don't present the export as the clear winner.";
+  document.getElementById("gap").innerHTML = `<thead><tr><th>Method</th>${F.map(f => `<th class="n">${pct(f)}</th>`).join("")}</tr></thead><tbody>${SERIES.map(s =>
+    `<tr><td class="series-name">${swatch(s)}${s.short}</td>${DATA.gap[s.id].map(v => `<td class="n">${pts(v)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+}
+function lossChart() {
+  const c = document.getElementById("c-loss");
+  const H = 120; const { svg, w } = svgFor(c, H);
+  const m = { l: 34, r: 8, t: 8, b: 24 };
+  const L = DATA.loss; const xmax = 20000;
+  const X = s => m.l + s / xmax * (w - m.l - m.r);
+  const Y = v => m.t + (1 - (v - 2.2) / (3.0 - 2.2)) * (H - m.t - m.b);
+  const g = el("g", {}, svg);
+  [2.4, 2.8].forEach(v => { el("line", { x1: m.l, x2: w - m.r, y1: Y(v), y2: Y(v), stroke: "var(--grid)" }, g); el("text", { x: m.l - 6, y: Y(v) + 4, "text-anchor": "end" }, g).textContent = v.toFixed(1); });
+  [0, 10000, 20000].forEach(s => el("text", { x: X(s), y: H - 6, "text-anchor": s === 0 ? "start" : s === xmax ? "end" : "middle" }, g).textContent = s === 0 ? "0" : (s / 1000) + "k steps");
+  const pts2 = L.map(([s, v]) => [X(s), Y(Math.min(3, v))]);
+  el("path", { d: `M${pts2[0][0]},${H - m.b}L` + pts2.map(p => p.join(",")).join("L") + `L${pts2[pts2.length - 1][0]},${H - m.b}Z`, fill: "var(--s-simclr)", opacity: 0.12 }, g);
+  el("polyline", { points: pts2.map(p => p.join(",")).join(" "), fill: "none", stroke: "var(--s-simclr)", "stroke-width": 2 }, g);
+  const last = pts2[pts2.length - 1];
+  el("circle", { cx: last[0], cy: last[1], r: 4, fill: "var(--s-simclr)", stroke: "var(--bg)", "stroke-width": 1.5 }, g);
+}
+
+function render() { effChart(); gainChart(); abstain(); lossChart(); }
+verdict(); legend("lg1", SERIES); legend("lg2", ["gbm", "simclr", "fixmatch"].map(id => byId[id]));
+equiv(); heat(); confusion(); caveats(); render();
+let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 120); });
+const repaint = () => { paintThumbs(document); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", repaint);
+new MutationObserver(repaint).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>
+
+</html>
