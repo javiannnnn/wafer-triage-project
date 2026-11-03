@@ -9,6 +9,11 @@ from wm811k.api.predictor import Predictor
 from wm811k.monitoring import COLUMNS, summarize_wafer
 
 DRIFT_SHARE = 0.3  # of the 3 monitored columns, one drifting is enough to call the window drifted
+# Tests pinned: left to choose, Evidently switches from p-value tests to distances once the
+# reference passes 1,000 rows, and the threshold below would then mean "any distance >= 0.001",
+# flagging every window. Distances also misfire on small windows, which p-values account for.
+NUM_METHOD = "ks"
+CAT_METHOD = "chisquare"
 P_VALUE_THRESHOLD = 0.001  # strict per column: large windows make the default 0.05 too jumpy
 NUMERICAL = ["die_count", "defect_ratio"]
 CATEGORICAL = ["label"]
@@ -46,7 +51,13 @@ def check_drift(
     from evidently.presets import DataDriftPreset
 
     definition = DataDefinition(numerical_columns=NUMERICAL, categorical_columns=CATEGORICAL)
-    report = Report([DataDriftPreset(drift_share=DRIFT_SHARE, threshold=P_VALUE_THRESHOLD)])
+    preset = DataDriftPreset(
+        drift_share=DRIFT_SHARE,
+        num_method=NUM_METHOD,
+        cat_method=CAT_METHOD,
+        threshold=P_VALUE_THRESHOLD,
+    )
+    report = Report([preset])
     snapshot = report.run(
         Dataset.from_pandas(current, data_definition=definition),
         Dataset.from_pandas(reference, data_definition=definition),

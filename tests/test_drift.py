@@ -28,6 +28,20 @@ def test_same_distribution_not_drifted():
     assert result.share_drifted_features == 0.0
 
 
+def test_same_distribution_not_drifted_with_a_large_reference():
+    # the served reference has 5,000 rows; past 1,000 Evidently switches from p-value tests to
+    # distances, so the threshold must keep meaning the same thing at every reference size
+    result = check_drift(_frame(0, n=5000), _frame(1, n=500))
+
+    assert not result.drifted and result.share_drifted_features == 0.0
+
+
+def test_shifted_defect_ratio_drifted_with_a_large_reference():
+    result = check_drift(_frame(0, n=5000), _frame(1, n=500, defect_shift=0.1))
+
+    assert result.drifted
+
+
 def test_shifted_defect_ratio_drifted():
     result = check_drift(_frame(0), _frame(1, defect_shift=0.1))
 
